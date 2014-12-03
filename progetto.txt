@@ -74,17 +74,3 @@ LOG
 	cerca														DONE
 	inserisci													DONE
 	aumenta														DONE
-	crea progetto2
-		modifica controllo iniziale dell'inserimento in confronto tra indirizzo base e limite dei prodotti
-		il campo numero prodotti ora indica la quantità di prodotti in magazzino
-		il numero di prodotti si deve calcolare come 8($gp) - 4($gp) / 20
-		modificato prologo/epilogo in inserisci aggiungendo $s2
-		eliminata somma di 1 al numero di prodotto a fine inserimento
-		
-		modificato controllo iniziale ricerca in confronto tra indirizzo base e limite prodotti
-		modificato prologo/epilogo in cerca aggiungendo $s2
-		modificato input a ricbin
-		
-		modificato controllo numero prodotti in aumenta tra indirizzo base e limite prodotti
-		modificato prologo/epilogo in aumenta aggiungendo $s5
-		aggiunta stringa straumentato e stampa a fine procedura
