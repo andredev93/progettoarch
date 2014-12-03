@@ -18,11 +18,14 @@ straskvalore:	.asciiz "inserire valore prodotto (intero)\n"
 strinserito:	.asciiz "prodotto inserito\n"
 strcancella: 	.asciiz "cancella\n"
 straumenta: 	.asciiz "aumenta\n"
-strquantita:	.asciiz "inserire la quantità di prodotti da spostare in magazzino (numero positivo):\n"
+strquantitain:	.asciiz "inserire la quantità di prodotti da spostare in magazzino (numero positivo):\n"
+strquantitaout:	.asciiz "inserire la quantità di prodotti da prelevare dal magazzino (numero positivo):\n"
 strerrneg:		.asciiz "inserita una quantità negativa, spostamento prodotti annullato\n"
 strmaxmag:		.asciiz "non è possibile aggiungere la quantità specificata di prodotti\nposti rimanenti: "
 straumentato:	.asciiz "quantità del prodotto aumentata\n"
 strdiminuisci: 	.asciiz "diminusci\n"
+strminmag:		.asciiz "la quantità di prodotti da prelevare specificata è maggiore della quantità del prodotto in magazzino\nquantità del prodotto: "
+strdiminuito:	.asciiz "quantità del prodotto diminuita\n"
 strvalore: 		.asciiz "valore\n"
 strexit:		.asciiz "fine\n"
 strzero:		.asciiz "non sono presenti prodotti in magazzino\n"
@@ -354,9 +357,9 @@ aumenta:
 
 # $s0 = codice prodotto da aumentare
 	move $s0, $v0
-	
+
 # richiedi quantita
-	la $a0, strquantita
+	la $a0, strquantitain
 	li $v0, 4
 	syscall
 	li $v0, 5
@@ -364,10 +367,10 @@ aumenta:
 	
 # $s1 = quantità
 	move $s1, $v0
-	
+
 # controlla numero positivo
-	ble $s1, $zero, errneg
-	
+	ble $s1, $zero, errnegaum
+
 # controlla capienza magazzino
 # $s2 = prodotti in magazzino ; $s3 = capienza massima ; $s4 = prodotti in magazzino + quantita
 	lhu $s2, 2($gp)
@@ -389,7 +392,7 @@ aumenta:
 	jal RicBin
 	
 # controllo prodotto
-	beq $v0, $zero, errpnt
+	beq $v0, $zero, errpntaum
 	
 # modifica quantità prodotto
 # $s0 = indirizzo prodotto
@@ -398,10 +401,10 @@ aumenta:
 	lw $s2, 12($s0)
 	add $s2, $s2, $s1
 	sw $s2, 12($s0)
-	
+
 # modifica impostazioni magazzino
 	sh $s4, 2($gp)
-	
+		##################################################################		
 # stampa stringa aumentato
 	la $a0, straumentato
 	li $v0, 4
@@ -409,7 +412,7 @@ aumenta:
 	j epilogoaum
 
 # è stato inserita una quantità negativa
-errneg:
+errnegaum:
 	la $a0, strerrneg
 	li $v0, 4
 	syscall
@@ -432,7 +435,7 @@ maxmag:
 	j epilogoaum
 
 # prodotto non in magazzino
-errpnt:
+errpntaum:
 	la $a0, strnontrovato
 	li $v0, 4
 	syscall
@@ -450,10 +453,114 @@ epilogoaum:
 	jr $ra
 
 diminuisci:
-# stampa
+# prologo
+	addi $sp, $sp, -12
+	sw $ra, 8($sp)
+	sw $s0, 4($sp)
+	sw $s1, 0($sp)
+	
+# stampa titolo
 	la $a0, strdiminuisci
 	li $v0, 4
 	syscall
+
+# stampa richiesta
+	la $a0, strcercaask
+	li $v0, 4
+	syscall
+	li $v0, 5
+	syscall
+
+# $s0 = codice prodotto da aumentare
+	move $s0, $v0
+	
+# richiedi quantita
+	la $a0, strquantitaout
+	li $v0, 4
+	syscall
+	li $v0, 5
+	syscall
+	
+# $s1 = quantità da prelevare
+	move $s1, $v0
+	
+# controlla numero positivo
+	ble $s1, $zero, errnegdim
+
+# cerca prodotto
+	lw $a0, 4($gp)
+	
+	lw $s2, 4($gp)
+	lw $s3, 8($gp)
+	sub $s2, $s3, $s2
+	li $s3, 20
+	div $s2, $s2, $s3				# $s2 = numero prodotti
+	move $a1, $s2
+	
+	move $a2, $s0
+	jal RicBin
+
+# controllo prodotto
+	beq $v0, $zero, errpntdim
+
+# $s0 = indirizzo prodotto
+# $s2 = quantità prodotto in magazzino
+	move $s0, $v0
+	lw $s2, 12($s0)
+	
+# controllo quantità prodotto - quantità da prelevare >= 0
+	sub $s3, $s2, $s1
+	blt $s3, $zero, minmag
+	
+# preleva prodotto
+	sw $s3, 12($s0)
+	
+# modifica impostazioni magazzino
+	lhu $s3, 2($gp)
+	sub $s3, $s3, $s1
+	sh $s3, 2($gp)
+
+# stampa stringa diminuito
+	la $a0, strdiminuito
+	li $v0, 4
+	syscall
+	j epilogodim
+
+# è stato inserita una quantità negativa
+errnegdim:
+	la $a0, strerrneg
+	li $v0, 4
+	syscall
+	j epilogodim
+
+# si prelevano più prodotti di quelli presenti in magazzino
+minmag:
+	la $a0, strminmag
+	li $v0, 4
+	syscall
+
+# stampa quantità prodotto in magazzino
+	add $a0, $zero, $s2
+	li $v0, 1
+	syscall
+	
+	la $a0, newline
+	li $v0, 4
+	syscall
+	j epilogodim
+	
+# prodotto non in magazzino
+errpntdim:
+	la $a0, strnontrovato
+	li $v0, 4
+	syscall
+
+# epilogo
+epilogodim:
+	lw $ra, 8($sp)
+	lw $s0, 4($sp)
+	lw $s1, 0($sp)
+	addi $sp, $sp, 12
 	jr $ra
 
 valore:
