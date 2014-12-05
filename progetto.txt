@@ -63,8 +63,8 @@ Processo
 	inserimento													DONE
 	cancella													/
 	aumenta														DONE
-	diminuisci													/
-	valore magazzino											/
+	diminuisci													DONE
+	valore magazzino											DONE
 	fine programma												DONE
 	
 **************************************
@@ -74,3 +74,7 @@ LOG
 	cerca														DONE
 	inserisci													DONE
 	aumenta														DONE
+3-12
+	diminuisci													DONE
+5-12
+	valore														DONE

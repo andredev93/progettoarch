@@ -26,14 +26,15 @@ straumentato:	.asciiz "quantità del prodotto aumentata\n"
 strdiminuisci: 	.asciiz "diminusci\n"
 strminmag:		.asciiz "la quantità di prodotti da prelevare specificata è maggiore della quantità del prodotto in magazzino\nquantità del prodotto: "
 strdiminuito:	.asciiz "quantità del prodotto diminuita\n"
-strvalore: 		.asciiz "valore\n"
+strvalore: 		.asciiz "valore magazzino\n"
+strvaloremag: 	.asciiz "il valore dei prodotti in magazzino è: "
 strexit:		.asciiz "fine\n"
 strzero:		.asciiz "non sono presenti prodotti in magazzino\n"
 
 
 
 # 0($gp) <-> |capienza| 					-> 2 byte in 0x10040000
-# 2($gp) <-> |numero prodotti|				-> 2 byte in 0x10040002
+# 2($gp) <-> |quantità prodotti|			-> 2 byte in 0x10040002
 # 4($gp) <-> |indirizzo base prodotti|  	-> 4 byte in 0x10040004
 # 8($gp) <-> |indirizzo limite prodotti|  	-> 4 byte in 0x10040008
 
@@ -564,12 +565,76 @@ epilogodim:
 	jr $ra
 
 valore:
-# stampa
+# prologo
+	addi $sp, $sp, -16
+	sw $ra, 12($sp)
+	sw $s0, 8($sp)
+	sw $s1, 4($sp)
+	sw $s0, 0($sp)
+	
+# stampa titolo
 	la $a0, strvalore
 	li $v0, 4
 	syscall
-	jr $ra
+	
+# $s0 = indirizzo primo prodotto
+# $s1 = indirizzo ultimo prodotto
+	lw $s0, 4($gp)
+	lw $s1, 8($gp)
 
+# controllo presenza prodotti in magazzino
+	beq $s0, $s1, noprod
+	
+# $s0 = indirizzo prodotto corrente
+# $s1 = numero prodotti
+# $s2 = somma
+	sub $s1, $s1, $s0
+	li $s2, 20
+	div $s1, $s1, $s2
+	li $s2, 0
+
+valoreLoop:	
+# calcola valore totale del prodotto (quantità * valore)
+	lw $t0, 12($s0)
+	lw $t1, 16($s0)
+	mul $t0, $t0, $t1
+
+# somma valore del prodotto corrente al totale
+	add $s2, $s2, $t0
+	
+# controllo fine prodotti
+	addi $s1, $s1, -1
+	beq $s1, $zero, result
+	
+# calcola indirizzo del prossimo prodotto
+	addi $s0, $s0, 20
+	j valoreLoop
+	
+noprod:
+	la $a0, strzero
+	li $v0, 4
+	syscall
+	j valoreepilogo
+	
+result:
+	la $a0, strvaloremag
+	li $v0, 4
+	syscall
+	
+	move $a0, $s2
+	li $v0, 1
+	syscall
+	
+	la $a0, newline
+	li $v0, 4
+	syscall
+	
+valoreepilogo:
+	lw $s2, 0($sp)
+	lw $s1, 4($sp)
+	lw $s0, 8($sp)
+	lw $ra, 12($sp)
+	jr $ra
 
 # ricerca binaria (*array, length, n)
 RicBin:
