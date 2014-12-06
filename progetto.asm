@@ -3,8 +3,11 @@ titolo: 		.asciiz "GESTIONE MAGAZZINO\n"
 operazioni: 	.space 32
 
 newline:		.asciiz "\n"
-strerr:			.asciiz "codice errato: inserire valore tra 0 e 7\n"
-strhelp:		.asciiz "operazioni possibili:\n0 -> help\n1 -> cerca prodotto\n2 -> inserisci nuovo prodotto\n3 -> cancella prodotto\n4 -> aumenta quantità di un prodotto\n5 -> diminuisci quantità di un prodotto\n6 -> valore del magazzino\n7 -> fine programma\n"
+strcoderr:		.asciiz "Codice errato: inserire valore tra 0 e 7\n"
+strhelp:		.asciiz "Operazioni possibili:\n0 -> help\n1 -> cerca prodotto\n2 -> inserisci nuovo prodotto\n3 -> cancella prodotto\n4 -> aumenta quantita di un prodotto\n5 -> diminuisci quantita di un prodotto\n6 -> valore del magazzino\n7 -> fine programma\n"
+straskcod:		.asciiz "\nInserire il codice dell'operazione da eseguire:\n"
+strexit:		.asciiz "fine programma\n"
+
 strcerca: 		.asciiz "cerca\n"
 strcercaask:	.asciiz "inserire il codice del prodotto da ricercare\n"
 strnontrovato:	.asciiz "prodotto non in magazzino\n"
@@ -28,10 +31,9 @@ strminmag:		.asciiz "la quantità di prodotti da prelevare specificata è maggio
 strdiminuito:	.asciiz "quantità del prodotto diminuita\n"
 strvalore: 		.asciiz "valore magazzino\n"
 strvaloremag: 	.asciiz "il valore dei prodotti in magazzino è: "
-strexit:		.asciiz "fine\n"
 strzero:		.asciiz "non sono presenti prodotti in magazzino\n"
 
-
+#########################################################################################################################################################################
 
 # 0($gp) <-> |capienza| 					-> 2 byte in 0x10040000
 # 2($gp) <-> |quantità prodotti|			-> 2 byte in 0x10040002
@@ -46,12 +48,12 @@ main:
 	syscall
 	
 # inizializzazione impostazioni
-# numero elementi  = 0x0000
+# quantità prodotti  = 0x0000
 # massima capienza = 0xFFFF
 	li $t0, 0xFFFF
 	sw $t0, 0($gp)
 	
-# indirizzo base della lista di prodotti
+# calcola indirizzo base e limite della lista di prodotti
 # alloca spazio per 10 prodotti
 	li $a0, 200
 	li $v0, 9
@@ -84,30 +86,38 @@ main:
 	li $v0, 4
 	syscall
 	
+#########################################################################################################################################################################
+	
 # richiesta operazione
-Loop:
+main_magazzino:
+	la $a0, straskcod
+	li $v0, 4
+	syscall
 	li $v0, 5
 	syscall
 	
-# controllo operazione
-	li $t0, 8
-	move $t1, $v0
-	blt $t1, $t0, cmdok
+# controllo codice operazione (cod >= 0 && cod < 8)
+	move $t0, $v0
+	blt $t0, $zero, coderr
+
+	li $t1, 8
+	blt $t0, $t1, cmdok
 
 # errore codice comando
-	la $a0, strerr
+coderr:
+	la $a0, strcoderr
 	li $v0, 4
 	syscall
-	j Loop
+	j main_magazzino
 	
 # chiama operazione
 cmdok:
-	la $t0, operazioni
-	sll $t1, $t1, 2
+	la $t1, operazioni
+	sll $t0, $t0, 2
 	add $t1, $t0, $t1
 	lw $t1, 0($t1)
 	jal $t1
-	j Loop
+	j main_magazzino
 	
 exit:
 	la $a0, strexit
