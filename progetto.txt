@@ -78,3 +78,5 @@ LOG
 	diminuisci													DONE
 5-12
 	valore														DONE
+8-12
+	refactor stringhe, main, cerca								DONE

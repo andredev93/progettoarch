@@ -1,37 +1,39 @@
 .data
-titolo: 		.asciiz "GESTIONE MAGAZZINO\n"
-operazioni: 	.space 32
+titolo: 				.asciiz "GESTIONE MAGAZZINO\n"
+operazioni: 			.space 32
+	
+newline:				.asciiz "\n"
+str_main_askcod:		.asciiz "\nInserire il codice dell'operazione da eseguire:\n"
+str_main_coderr:		.asciiz "Codice errato: inserire valore tra 0 e 7\n"
+str_op_help:			.asciiz "Operazioni possibili:\n0 -> help\n1 -> cerca prodotto\n2 -> inserisci nuovo prodotto\n3 -> cancella prodotto\n4 -> aumenta quantita di un prodotto\n5 -> diminuisci quantita di un prodotto\n6 -> valore del magazzino\n7 -> fine programma\n"
+str_op_cerca: 			.asciiz "Cerca prodotto\n"
+str_cerca_zeroprod:		.asciiz "Non sono presenti prodotti in magazzino\n"
+str_cerca_askcod:		.asciiz "Inserire il codice del prodotto da ricercare\n"
+str_cerca_nontrovato:	.asciiz "Prodotto non in magazzino\n"
+str_cerca_codprod:		.asciiz "Codice prodotto:\t"
+str_cerca_nomeprod:		.asciiz "Nome prodotto:\t"
+str_cerca_qntprod:		.asciiz "Quantita prodotto in magazzino:\t"
+str_cerca_valprod:		.asciiz "Valore prodotto:\t"
 
-newline:		.asciiz "\n"
-strcoderr:		.asciiz "Codice errato: inserire valore tra 0 e 7\n"
-strhelp:		.asciiz "Operazioni possibili:\n0 -> help\n1 -> cerca prodotto\n2 -> inserisci nuovo prodotto\n3 -> cancella prodotto\n4 -> aumenta quantita di un prodotto\n5 -> diminuisci quantita di un prodotto\n6 -> valore del magazzino\n7 -> fine programma\n"
-straskcod:		.asciiz "\nInserire il codice dell'operazione da eseguire:\n"
-strexit:		.asciiz "fine programma\n"
 
-strcerca: 		.asciiz "cerca\n"
-strcercaask:	.asciiz "inserire il codice del prodotto da ricercare\n"
-strnontrovato:	.asciiz "prodotto non in magazzino\n"
-strcodice:		.asciiz "codice prodotto:\t"
-strnome:		.asciiz "nome prodotto:\t"
-straskquantita:	.asciiz "quantità prodotto:\t"
-strvaloreprd:	.asciiz "valore prodotto:\t"
-strinserisci: 	.asciiz "inserisci\n"
-strasknome:		.asciiz "inserire nome prodotto (max 7 caratteri)\n"
-straskvalore:	.asciiz "inserire valore prodotto (intero)\n"
-strinserito:	.asciiz "prodotto inserito\n"
-strcancella: 	.asciiz "cancella\n"
-straumenta: 	.asciiz "aumenta\n"
-strquantitain:	.asciiz "inserire la quantità di prodotti da spostare in magazzino (numero positivo):\n"
-strquantitaout:	.asciiz "inserire la quantità di prodotti da prelevare dal magazzino (numero positivo):\n"
-strerrneg:		.asciiz "inserita una quantità negativa, spostamento prodotti annullato\n"
-strmaxmag:		.asciiz "non è possibile aggiungere la quantità specificata di prodotti\nposti rimanenti: "
-straumentato:	.asciiz "quantità del prodotto aumentata\n"
-strdiminuisci: 	.asciiz "diminusci\n"
-strminmag:		.asciiz "la quantità di prodotti da prelevare specificata è maggiore della quantità del prodotto in magazzino\nquantità del prodotto: "
-strdiminuito:	.asciiz "quantità del prodotto diminuita\n"
-strvalore: 		.asciiz "valore magazzino\n"
-strvaloremag: 	.asciiz "il valore dei prodotti in magazzino è: "
-strzero:		.asciiz "non sono presenti prodotti in magazzino\n"
+strinserisci: 			.asciiz "inserisci\n"
+strasknome:				.asciiz "inserire nome prodotto (max 7 caratteri)\n"
+straskvalore:			.asciiz "inserire valore prodotto (intero)\n"
+strinserito:			.asciiz "prodotto inserito\n"
+strcancella: 			.asciiz "cancella\n"
+straumenta: 			.asciiz "aumenta\n"
+strquantitain:			.asciiz "inserire la quantità di prodotti da spostare in magazzino (numero positivo):\n"
+strquantitaout:			.asciiz "inserire la quantità di prodotti da prelevare dal magazzino (numero positivo):\n"
+strerrneg:				.asciiz "inserita una quantità negativa, spostamento prodotti annullato\n"
+strmaxmag:				.asciiz "non è possibile aggiungere la quantità specificata di prodotti\nposti rimanenti: "
+straumentato:			.asciiz "quantità del prodotto aumentata\n"
+strdiminuisci: 			.asciiz "diminusci\n"
+strminmag:				.asciiz "la quantità di prodotti da prelevare specificata è maggiore della quantità del prodotto in magazzino\nquantità del prodotto: "
+strdiminuito:			.asciiz "quantità del prodotto diminuita\n"
+strvalore: 				.asciiz "valore magazzino\n"
+strvaloremag: 			.asciiz "il valore dei prodotti in magazzino è: "
+	
+strexit:				.asciiz "Fine programma\n"
 
 #########################################################################################################################################################################
 
@@ -48,23 +50,23 @@ main:
 	syscall
 	
 # inizializzazione impostazioni
-# quantità prodotti  = 0x0000
-# massima capienza = 0xFFFF
+# quantità prodotti  = 0x0000 in 2($gp)
+# massima capienza = 0xFFFF in 0($gp)
 	li $t0, 0xFFFF
 	sw $t0, 0($gp)
 	
-# calcola indirizzo base e limite della lista di prodotti
+# calcola indirizzo base e limite iniziali della lista di prodotti
 # alloca spazio per 10 prodotti
 	li $a0, 200
 	li $v0, 9
 	syscall
-	move $t0, $v0
+	move $t0, $v0		# $t0 = indirizzo memoria allocata
 	sw $t0, 4($gp)
 	sw $t0, 8($gp)
 	
 # inizializzazione jump address table delle operazioni disponibili
-	la $t0, operazioni
-	la $t1, help
+	la $t0, operazioni	# $t0 = indirizzo base jump address table
+	la $t1, help		# $t1 = indirizzo operazione
 	sw $t1, 0($t0)
 	la $t1, cerca
 	sw $t1, 4($t0)
@@ -82,176 +84,195 @@ main:
 	sw $t1, 28($t0)
 
 # stampa help
-	la $a0, strhelp
+	la $a0, str_op_help
 	li $v0, 4
 	syscall
 	
 #########################################################################################################################################################################
-	
-# richiesta operazione
+
 main_magazzino:
-	la $a0, straskcod
+# stampa richiesta operazione
+	la $a0, str_main_askcod
 	li $v0, 4
 	syscall
+	
+# richiedi codice operazione
 	li $v0, 5
 	syscall
 	
 # controllo codice operazione (cod >= 0 && cod < 8)
-	move $t0, $v0
-	blt $t0, $zero, coderr
+	move $t0, $v0			# $t0 = codice operazione dato in input
+	blt $t0, $zero, main_coderr
 
 	li $t1, 8
-	blt $t0, $t1, cmdok
+	blt $t0, $t1, main_cmdok
 
 # errore codice comando
-coderr:
-	la $a0, strcoderr
+main_coderr:
+	la $a0, str_main_coderr
 	li $v0, 4
 	syscall
 	j main_magazzino
-	
-# chiama operazione
-cmdok:
-	la $t1, operazioni
+
+main_cmdok:
+# call operazione: (codice * 4) + jat
+# $t0 = codice operazione dato in input
+	la $t1, operazioni	# $t1 = indirizzo base jump address table
 	sll $t0, $t0, 2
-	add $t1, $t0, $t1
-	lw $t1, 0($t1)
+	add $t1, $t0, $t1	# $t1 = indirizzo operazione in memoria
+	lw $t1, 0($t1)		# $t1 = indirizzo operazione
 	jal $t1
-	j main_magazzino
 	
-exit:
-	la $a0, strexit
-	li $v0, 4
-	syscall
-	li $v0, 10
-	syscall
+# operazione eseguita
+	j main_magazzino
 	
 #############################################################################################################################
 
 help:
-	la $a0, strhelp
+# stampa help
+	la $a0, str_op_help
 	li $v0, 4
 	syscall
 	jr $ra
 	
 cerca:
 # prologo
-	addi $sp, $sp, -16
-	sw $ra, 12($sp)
-	sw $s2, 8($sp)
+	addi $sp, $sp, -12
+	sw $ra, 8($sp)
 	sw $s1, 4($sp)
 	sw $s0, 0($sp)
 	
-# stampa strcerca
-	la $a0, strcerca
+# stampa titolo operazione
+	la $a0, str_op_cerca
 	li $v0, 4
 	syscall
 	
-# controlla numero di prodotti
-	lw $s0, 4($gp)					# $s0 = indirizzo base prodotti
-	lw $s1, 8($gp)					# $s1 = indirizzo limite prodotti	
-	beq $s0, $s1, zeropr
+# controlla numero di prodotti: se indirizzo base e indirizzo limite sono diversi allora sono presenti prodotti
+	lw $s0, 4($gp)			# $s0 = indirizzo base prodotti			
+	lw $s1, 8($gp)			# $s1 = indirizzo limite prodotti			
+	beq $s0, $s1, cerca_zeroprod
 	
-# sono presenti prodotti
-	sub $s0, $s1, $s0
-	li $s2, 20
-	div $s0, $s0, $s2				# $s0 = numero prodotti
-	lw $s1, 4($gp)					# $s1 = indirizzo primo prodotto
+# sono presenti prodotti in magazzino
+# $s0 = indirizzo base prodotti
+# $s1 = indirizzo limite prodotti
+	sub $s1, $s1, $s0		# $s1 = indirizzo limite - indirizzo base
+	li $t0, 20
+	div $s1, $s1, $t0		# $s1 = $s1 / (dimensione struttura prodotto = 20) = numero prodotti
 
 # richiesta prodotto da ricercare
-	la $a0, strcercaask
+	la $a0, str_cerca_askcod
 	li $v0, 4
 	syscall
+	
+# richiedi codice prodotto
 	li $v0, 5
 	syscall
 
-# RicBin($array, length, n)
-	move $a0, $s1
-	move $a1, $s0
+# call ricbin(*array, length, n)
+# $s0 = indirizzo base prodotti
+# $s1 = numero prodotti = lunghezza array
+# $v0 = codice prodotto da cercare
+	move $a0, $s0
+	move $a1, $s1
 	move $a2, $v0
 	jal RicBin
 
-	move $s1, $v0			# $s1 = risultato ricerca
+	move $s1, $v0			# $s1 = risultato ricerca binaria
 
-	beq $s1, $zero, nontrovato
+# se il risultato è 0 il prodotto non è in magazzino
+	beq $s1, $zero, cerca_nontrovato
 
+# prodotto trovato
 	lw $t0, 0($s1)			# $t0 = codice prodotto
-	addi $t1, $s1, 4		# $t1 = indirizzo nome prodotto
+	addi $t1, $s1, 4		# $t1 = indirizzo prodotto + 4 = indirizzo nome prodotto
 	lw $t2, 12($s1)			# $t2 = quantità prodotto
 	lw $t3, 16($s1)			# $t3 = valore prodotto
 
-# stampa codice prodotto
-	la $a0, strcodice
+# stampa str_cerca_codprod
+	la $a0, str_cerca_codprod
 	li $v0, 4
 	syscall
-	
+
+# stampa codice prodotto	
+# $t0 = codice prodotto
 	move $a0, $t0
 	li $v0, 1
 	syscall
 	
+# stampa newline
 	la $a0, newline
+	li $v0, 4
+	syscall
+
+# stampa str_cerca_nomeprod
+	la $a0, str_cerca_nomeprod
 	li $v0, 4
 	syscall
 
 # stampa nome prodotto
-	la $a0, strnome
-	li $v0, 4
-	syscall
-	
+# $t1 = indirizzo nome prodotto
 	move $a0, $t1
 	li $v0, 4
 	syscall
-	
+
+# stampa newline	
 	la $a0, newline
 	li $v0, 4
 	syscall
 
-# stampa quantità prodotto
-	la $a0, straskquantita
+# stampa str_cerca_qntprod
+	la $a0, str_cerca_qntprod
 	li $v0, 4
 	syscall
-	
+
+# stampa quantita prodotto
+# $t2 = quantità prodotto
 	move $a0, $t2
 	li $v0, 1
 	syscall
-	
+
+# stampa newline	
 	la $a0, newline
+	li $v0, 4
+	syscall
+
+# stampa str_cerca_valprod
+	la $a0, str_cerca_valprod
 	li $v0, 4
 	syscall
 
 # stampa valore prodotto
-	la $a0, strvaloreprd
-	li $v0, 4
-	syscall
-	
+# $t3 = valore prodotto
 	move $a0, $t3
 	li $v0, 1
 	syscall
 	
+# stampa newline
 	la $a0, newline
 	li $v0, 4
 	syscall
-	j epilogo
+	j cerca_epilogo
 
+cerca_zeroprod:
 # non sono presenti prodotti in magazzino
-zeropr:
-	la $a0, strzero
+# stampa str_cerca_zeroprod
+	la $a0, str_cerca_zeroprod
 	li $v0, 4
 	syscall
-	j epilogo
+	j cerca_epilogo
 
-nontrovato:
-	la $a0, strnontrovato
+cerca_nontrovato:
+# stampa str_cerca_nontrovato
+	la $a0, str_cerca_nontrovato
 	li $v0, 4
 	syscall
 	
+cerca_epilogo:
 # epilogo
-epilogo:
-	lw $ra, 12($sp)
-	lw $s2, 8($sp)
+	lw $ra, 8($sp)
 	lw $s1, 4($sp)
 	lw $s0, 0($sp)
-	addi $sp, $sp, 16
+	addi $sp, $sp, 12
 	jr $ra
 
 inserisci:
@@ -360,7 +381,7 @@ aumenta:
 	syscall
 	
 # stampa richiesta
-	la $a0, strcercaask
+	la $a0, str_cerca_askcod
 	li $v0, 4
 	syscall
 	li $v0, 5
@@ -447,7 +468,7 @@ maxmag:
 
 # prodotto non in magazzino
 errpntaum:
-	la $a0, strnontrovato
+	la $a0, str_cerca_nontrovato
 	li $v0, 4
 	syscall
 	
@@ -476,7 +497,7 @@ diminuisci:
 	syscall
 
 # stampa richiesta
-	la $a0, strcercaask
+	la $a0, str_cerca_askcod
 	li $v0, 4
 	syscall
 	li $v0, 5
@@ -562,7 +583,7 @@ minmag:
 	
 # prodotto non in magazzino
 errpntdim:
-	la $a0, strnontrovato
+	la $a0, str_cerca_nontrovato
 	li $v0, 4
 	syscall
 
@@ -621,7 +642,7 @@ valoreLoop:
 	j valoreLoop
 	
 noprod:
-	la $a0, strzero
+	la $a0, str_cerca_zeroprod
 	li $v0, 4
 	syscall
 	j valoreepilogo
@@ -645,6 +666,13 @@ valoreepilogo:
 	lw $s0, 8($sp)
 	lw $ra, 12($sp)
 	jr $ra
+
+exit:
+	la $a0, strexit
+	li $v0, 4
+	syscall
+	li $v0, 10
+	syscall	
 
 # ricerca binaria (*array, length, n)
 RicBin:

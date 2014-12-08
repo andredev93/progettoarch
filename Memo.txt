@@ -1,8 +1,15 @@
 Etichette
-44	main
-92	main_magazzino
-108	coderr
-114	cmdok
-122 exit
+46	main
+94	main_magazzino
+ 109	main_coderr
+ 116	main_cmdok
 131 help
 137 cerca
+ 232 cerca_zeroprod
+ 252 cerca_nontrovato
+ 271 cerca_epilogo
+
+
+
+Registri salvati
+cerca: s0, s1
