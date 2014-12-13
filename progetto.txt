@@ -80,3 +80,5 @@ LOG
 	valore														DONE
 8-12
 	refactor stringhe, main, cerca								DONE
+13-12
+	refactor inserisci											DONE

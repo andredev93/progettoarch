@@ -8,8 +8,13 @@ Etichette
  232 cerca_zeroprod
  252 cerca_nontrovato
  271 cerca_epilogo
-
+280 inserisci
+	321 inserisci_spaziosuff
+	329 inserisci_primaposizione
+	333 inserisci_inserimento
+	
 
 
 Registri salvati
 cerca: s0, s1
+inserisci: s0, s1

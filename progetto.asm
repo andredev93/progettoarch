@@ -12,14 +12,14 @@ str_cerca_askcod:		.asciiz "Inserire il codice del prodotto da ricercare\n"
 str_cerca_nontrovato:	.asciiz "Prodotto non in magazzino\n"
 str_cerca_codprod:		.asciiz "Codice prodotto:\t"
 str_cerca_nomeprod:		.asciiz "Nome prodotto:\t"
-str_cerca_qntprod:		.asciiz "Quantita prodotto in magazzino:\t"
-str_cerca_valprod:		.asciiz "Valore prodotto:\t"
+str_cerca_qntprod:		.asciiz "Quantita del prodotto in magazzino:\t"
+str_cerca_valprod:		.asciiz "Valore del prodotto:\t"
+str_op_inserisci: 		.asciiz "Inserisci prodotto\n"
+str_inserisci_asknome:	.asciiz "Inserire il nome del prodotto (max 7 caratteri)\n"
+str_inserisci_val:		.asciiz "Inserire il valore del prodotto (intero)\n"
+str_inserisci_inserito:	.asciiz "Prodotto inserito\n"
 
 
-strinserisci: 			.asciiz "inserisci\n"
-strasknome:				.asciiz "inserire nome prodotto (max 7 caratteri)\n"
-straskvalore:			.asciiz "inserire valore prodotto (intero)\n"
-strinserito:			.asciiz "prodotto inserito\n"
 strcancella: 			.asciiz "cancella\n"
 straumenta: 			.asciiz "aumenta\n"
 strquantitain:			.asciiz "inserire la quantità di prodotti da spostare in magazzino (numero positivo):\n"
@@ -126,7 +126,7 @@ main_cmdok:
 # operazione eseguita
 	j main_magazzino
 	
-#############################################################################################################################
+#########################################################################################################################################################################
 
 help:
 # stampa help
@@ -134,6 +134,8 @@ help:
 	li $v0, 4
 	syscall
 	jr $ra
+
+#########################################################################################################################################################################
 	
 cerca:
 # prologo
@@ -142,7 +144,7 @@ cerca:
 	sw $s1, 4($sp)
 	sw $s0, 0($sp)
 	
-# stampa titolo operazione
+# stampa titolo cerca
 	la $a0, str_op_cerca
 	li $v0, 4
 	syscall
@@ -275,87 +277,106 @@ cerca_epilogo:
 	addi $sp, $sp, 12
 	jr $ra
 
+#########################################################################################################################################################################
+
 inserisci:
 # prologo
-	addi $sp, $sp, -16
-	sw $ra, 12($sp)
-	sw $s0, 8($sp)
+	addi $sp, $sp, -12
+	sw $ra, 8($sp)
 	sw $s1, 4($sp)
-	sw $s2, 0($sp)
+	sw $s0, 0($sp)
 
-# stampa
-	la $a0, strinserisci
+# stampa titolo operazione
+	la $a0, str_op_inserisci
 	li $v0, 4
 	syscall
 
-# controlla presenza di prodotti
+# controlla numero di prodotti: se indirizzo base e indirizzo limite sono uguali allora si deve inserire il nuovo prodotto all'inizio
 	lw $s0, 4($gp)		# $s0 = indirizzo base prodotti
 	lw $s1, 8($gp)		# $s1 = indirizzo limite prodotti
-	beq $s0, $s1, primo
+	beq $s0, $s1, inserisci_primaposizione
 
-# controlla se c'è spazio per l'inserimento
-	sub $s0, $s1, $s0	# calcola il numero di prodotti
-	li $s1, 20
+# se non è il primo prodotto calcola i dati necessari per controllare se c'è spazio per l'inserimento
+# $s0 = indirizzo base prodotti
+# $s1 = indirizzo limite prodotti
+	sub $s0, $s1, $s0	# $s0 = indirizzo limite - indirizzo base prodotti
+	li $s1, 20			# $s1 = dimensione struttura prodotto
 	div $s0, $s0, $s1	# $s0 = numero di prodotti
-	li $s1, 10
+	li $s1, 10			# $s1 = dimensione base array prodotti
 	div $s0, $s1
-	mfhi $s1			# $s1 = $s0 % 10
+	mfhi $s1			# $s1 = numero di prodotti modulo dimensione base array
 	
-# se $s1 = 9 aumenta spazio per altri 10 prodotti
-	li $s2, 9
-	bne $s1, $s2, spaziosuff
+# controlla se c'è spazio per l'inserimento: il numero di prodotti modulo 10 non deve essere 9
+# $s0 = numero di prodotti
+# $s1 = numero di prodotti modulo dimensione base array
+	li $t0, 9			# $t0 = limite prodotti
+	bne $s1, $t0, inserisci_spaziosuff
+	
+# alloca spazio per altri 10 prodotti
 	li $a0, 200
 	li $v0, 9
 	syscall	
 	
-spaziosuff:
+inserisci_spaziosuff:
 # l'indirizzo in cui inserire il prodotto è in fondo alla lista
-	lw $s1, 8($gp)		# $s1 = indirizzo dove inserire il prodotto
-	j insert
-	
-primo:
+# $s0 = numero di prodotti
+# $s1 = numero di prodotti modulo dimensione base array
+	lw $s1, 8($gp)		# $s1 = indirizzo dove inserire il prodotto (posizione limite)
+	j inserisci_inserimento
+
+inserisci_primaposizione:
+# codice prodotto di default
 	li $s0, 0			# $s0 = 0 = codice del primo prodotto
 
-insert:
-# salva codice prodotto default
+inserisci_inserimento:
+# salva codice prodotto
+# $s0 = codice prodotto
+# $s1 = indirizzo dove inserire il prodotto
 	sw $s0, 0($s1)
 
-# chiedi nome prodotto
-	la $a0, strasknome
+# stampa str_inserisci_asknome
+	la $a0, str_inserisci_asknome
 	li $v0, 4
 	syscall
+	
+# salva nome prodotto in memoria nella struttura prodotto
 	add $a0, $s1, 4
 	li $a1, 8
 	li $v0, 8
 	syscall
 
-# salva quantità default 0
+# salva quantità default pari a 0
 	sw $zero, 12($s1)
 
 # chiedi valore prodotto
-	la $a0, straskvalore
+	la $a0, str_inserisci_val
 	li $v0, 4
 	syscall
+	
+# salva valore prodotto
 	li $v0, 5
 	syscall
 	sw $v0, 16($s1)
 	
-# stampa prodotto inserito
-	la $a0, strinserito
+# stampa str_inserisci_inserito
+	la $a0, str_inserisci_inserito
 	li $v0, 4
 	syscall
 	
 # aggiorna indirizzo limite
-	addi $s1, $s1, 20
+# $s0 = codice prodotto
+# $s1 = indirizzo dove inserire il prodotto
+	addi $s1, $s1, 20	# $s1 = indirizzo prodotto successivo, nuovo indirizzo limite
 	sw $s1, 8($gp)
 
 # epilogo
-	lw $ra, 12($sp)
-	lw $s0, 8($sp)
+	lw $ra, 8($sp)
 	lw $s1, 4($sp)
-	lw $s2, 0($sp)
-	addi $sp, $sp, 16
+	lw $s0, 0($sp)
+	addi $sp, $sp, 12
 	jr $ra
+
+#########################################################################################################################################################################
 
 cancella:
 # stampa
