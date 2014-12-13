@@ -19,14 +19,19 @@ str_inserisci_asknome:	.asciiz "Inserire il nome del prodotto (max 7 caratteri)\
 str_inserisci_val:		.asciiz "Inserire il valore del prodotto (intero)\n"
 str_inserisci_inserito:	.asciiz "Prodotto inserito\n"
 
+str_op_aumenta: 		.asciiz "Aumenta quantita prodotto\n"
+str_aumenta_qnt:		.asciiz "Inserire la quantita di prodotti da spostare in magazzino (numero positivo):\n"
+str_aumenta_aumentato:	.asciiz "Aumentata la quantita del prodotto\n"
+str_aumenta_numneg:		.asciiz "Inserita una quantita negativa, spostamento prodotti annullato\n"
+str_aumenta_maxmag:		.asciiz "Non e' possibile aggiungere la quantita specificata di prodotti\nPosti rimanenti: "
 
 strcancella: 			.asciiz "cancella\n"
-straumenta: 			.asciiz "aumenta\n"
-strquantitain:			.asciiz "inserire la quantità di prodotti da spostare in magazzino (numero positivo):\n"
+
+
 strquantitaout:			.asciiz "inserire la quantità di prodotti da prelevare dal magazzino (numero positivo):\n"
-strerrneg:				.asciiz "inserita una quantità negativa, spostamento prodotti annullato\n"
-strmaxmag:				.asciiz "non è possibile aggiungere la quantità specificata di prodotti\nposti rimanenti: "
-straumentato:			.asciiz "quantità del prodotto aumentata\n"
+
+
+
 strdiminuisci: 			.asciiz "diminusci\n"
 strminmag:				.asciiz "la quantità di prodotti da prelevare specificata è maggiore della quantità del prodotto in magazzino\nquantità del prodotto: "
 strdiminuito:			.asciiz "quantità del prodotto diminuita\n"
@@ -385,6 +390,8 @@ cancella:
 	syscall
 	jr $ra
 
+#########################################################################################################################################################################
+
 aumenta:
 # prologo
 	addi $sp, $sp, -28
@@ -396,105 +403,144 @@ aumenta:
 	sw $s4, 4($sp)
 	sw $s5, 0($sp)
 
-# stampa titolo
-	la $a0, straumenta
+# stampa str_op_aumenta
+	la $a0, str_op_aumenta
 	li $v0, 4
 	syscall
 	
-# stampa richiesta
+# controlla numero di prodotti: se indirizzo base e indirizzo limite sono diversi allora sono presenti prodotti
+	lw $s0, 4($gp)			# $s0 = indirizzo base prodotti			
+	lw $s1, 8($gp)			# $s1 = indirizzo limite prodotti			
+	beq $s0, $s1, aumenta_zeroprod
+	
+# stampa str_cerca_askcod
 	la $a0, str_cerca_askcod
 	li $v0, 4
 	syscall
+	
+# richiedi codice prodotto
+# $s0 = indirizzo base prodotti	
+# $s1 = indirizzo limite prodotti
 	li $v0, 5
 	syscall
+	move $s0, $v0 # $s0 = codice prodotto da aumentare
 
-# $s0 = codice prodotto da aumentare
-	move $s0, $v0
-
-# richiedi quantita
-	la $a0, strquantitain
+# stamp str_aumenta_qnt
+	la $a0, str_aumenta_qnt
 	li $v0, 4
 	syscall
+	
+# richiedi quantita
 	li $v0, 5
 	syscall
 	
-# $s1 = quantità
+# $s1 = quantita da aggiungere
 	move $s1, $v0
 
-# controlla numero positivo
-	ble $s1, $zero, errnegaum
+# controlla se il numero di prodotti da aggiungere sia un numero positivo
+# $s0 = codice prodotto da aumentare
+# $s1 = quantita da aggiungere
+	ble $s1, $zero, aumenta_numneg
 
-# controlla capienza magazzino
+# controlla che l'aumento della quantita di prodotto non superi la capienza del magazzino
 # $s2 = prodotti in magazzino ; $s3 = capienza massima ; $s4 = prodotti in magazzino + quantita
-	lhu $s2, 2($gp)
-	lhu $s3, 0($gp)
-	add $s4, $s2, $s1
-	bgt $s4, $s3, maxmag
-	
-# cerca prodotto
+	lhu $s2, 2($gp)			# $s2 = quantita prodotti attuali
+	lhu $s3, 0($gp)			# $s3 = capienza massima
+	add $s4, $s1, $s2		# $s4 = prodotti attuali + prodotti da inserire
+	bgt $s4, $s3, aumenta_maxmag
+
+# se l'aggiunta non supera la capienza del magazzino cerca il prodotto
+# call ricbin(*array, length, n)
+# $s0 = codice prodotto da aumentare
+# $s1 = quantita da aggiungere
+# $s2 = quantita prodotti attuali
+# $s3 = capienza massima
+# $s4 = prodotti attuali + prodotti da inserire
 	lw $a0, 4($gp)
 	
-	lw $s3, 4($gp)
-	lw $s5, 8($gp)
-	sub $s3, $s5, $s3
-	li $s5, 20
-	div $s3, $s3, $s5				# $s3 = numero prodotti
+# calcola lunghezza array (numero prodotti)
+	lw $s3, 4($gp)			# $s3 = indirizzo base prodotti
+	lw $s5, 8($gp)			# $s5 = indirizzo limite prodotti
+	sub $s3, $s5, $s3		# $s3 = indirizzo limite - indirizzo base
+	li $s5, 20				# $s5 = dimensione struttura prodotto
+	div $s3, $s3, $s5		# $s3 = lunghezza array
 	move $a1, $s3
 	
 	move $a2, $s0
 	jal RicBin
 	
-# controllo prodotto
-	beq $v0, $zero, errpntaum
+# controllo risultato ricerca: se è 0 allora il prodotto non è presente in magazzino
+	beq $v0, $zero, aumenta_nontrovato
 	
-# modifica quantità prodotto
-# $s0 = indirizzo prodotto
-# $s2 = quantità prodotto
-	move $s0, $v0
-	lw $s2, 12($s0)
-	add $s2, $s2, $s1
+# aumenta quantita prodotto
+# $s0 = codice prodotto da aumentare
+# $s1 = quantita da aggiungere
+# $s2 = quantita prodotti attuali
+# $s3 = indirizzo limite - indirizzo base
+# $s4 = prodotti attuali + prodotti da inserire
+# $s5 = dimensione struttura prodotto
+	move $s0, $v0			# $s0 = indirizzo prodotto
+	lw $s2, 12($s0)			# $s2 = quantita attuale prodotto
+	add $s2, $s2, $s1		# $s2 = quantita finale prodotto
 	sw $s2, 12($s0)
 
-# modifica impostazioni magazzino
+# aggiorna contatore dei prodotti in magazzino
 	sh $s4, 2($gp)
-		##################################################################		
-# stampa stringa aumentato
-	la $a0, straumentato
+	
+# stampa str_aumenta_aumentato
+	la $a0, str_aumenta_aumentato
 	li $v0, 4
 	syscall
-	j epilogoaum
+	j aumenta_epilogo
 
-# è stato inserita una quantità negativa
-errnegaum:
-	la $a0, strerrneg
+aumenta_zeroprod:
+# non sono presenti prodotti in magazzino
+# stampa str_cerca_zeroprod
+	la $a0, str_cerca_zeroprod
 	li $v0, 4
 	syscall
-	j epilogoaum
+	j aumenta_epilogo
+	
+# è stato inserita una quantità negativa
+aumenta_numneg:
+# stampa str_aumenta_numneg
+	la $a0, str_aumenta_numneg
+	li $v0, 4
+	syscall
+	j aumenta_epilogo
 
 # è stata superata la capienza del magazzino
-maxmag:
-	la $a0, strmaxmag
+aumenta_maxmag:
+# stampa str_aumenta_maxmag
+	la $a0, str_aumenta_maxmag
 	li $v0, 4
 	syscall
 	
 # stampa posti rimanenti
-	sub $a0, $s3, $s2
+# $s0 = codice prodotto da aumentare
+# $s1 = quantita da aggiungere
+# $s2 = quantita prodotti attuali
+# $s3 = indirizzo limite - indirizzo base
+# $s4 = prodotti attuali + prodotti da inserire
+# $s5 = dimensione struttura prodotto
+	sub $a0, $s3, $s2	# $a0 = indirizzo limite - indirizzo base - quantita attuale
 	li $v0, 1
 	syscall
 	
+# stampa newline	
 	la $a0, newline
 	li $v0, 4
 	syscall
-	j epilogoaum
+	j aumenta_epilogo
 
 # prodotto non in magazzino
-errpntaum:
+aumenta_nontrovato:
 	la $a0, str_cerca_nontrovato
 	li $v0, 4
 	syscall
 	
 # epilogo
-epilogoaum:
+aumenta_epilogo:
 	lw $ra, 24($sp)
 	lw $s0, 20($sp)
 	lw $s1, 16($sp)
@@ -504,6 +550,8 @@ epilogoaum:
 	lw $s5, 0($sp)
 	addi $sp, $sp, 28
 	jr $ra
+
+#########################################################################################################################################################################
 
 diminuisci:
 # prologo
@@ -534,7 +582,7 @@ diminuisci:
 	li $v0, 5
 	syscall
 	
-# $s1 = quantità da prelevare
+# $s1 = quantita da prelevare
 	move $s1, $v0
 	
 # controlla numero positivo
@@ -557,11 +605,11 @@ diminuisci:
 	beq $v0, $zero, errpntdim
 
 # $s0 = indirizzo prodotto
-# $s2 = quantità prodotto in magazzino
+# $s2 = quantita prodotto in magazzino
 	move $s0, $v0
 	lw $s2, 12($s0)
 	
-# controllo quantità prodotto - quantità da prelevare >= 0
+# controllo quantita prodotto - quantita da prelevare >= 0
 	sub $s3, $s2, $s1
 	blt $s3, $zero, minmag
 	
@@ -579,9 +627,9 @@ diminuisci:
 	syscall
 	j epilogodim
 
-# è stato inserita una quantità negativa
+# è stata inserita una quantita negativa
 errnegdim:
-	la $a0, strerrneg
+	la $a0, str_aumenta_numneg
 	li $v0, 4
 	syscall
 	j epilogodim
@@ -592,7 +640,7 @@ minmag:
 	li $v0, 4
 	syscall
 
-# stampa quantità prodotto in magazzino
+# stampa quantita prodotto in magazzino
 	add $a0, $zero, $s2
 	li $v0, 1
 	syscall
@@ -615,6 +663,8 @@ epilogodim:
 	lw $s1, 0($sp)
 	addi $sp, $sp, 12
 	jr $ra
+
+#########################################################################################################################################################################
 
 valore:
 # prologo
@@ -646,7 +696,7 @@ valore:
 	li $s2, 0
 
 valoreLoop:	
-# calcola valore totale del prodotto (quantità * valore)
+# calcola valore totale del prodotto (quantita * valore)
 	lw $t0, 12($s0)
 	lw $t1, 16($s0)
 	mul $t0, $t0, $t1
@@ -694,6 +744,8 @@ exit:
 	syscall
 	li $v0, 10
 	syscall	
+
+#########################################################################################################################################################################
 
 # ricerca binaria (*array, length, n)
 RicBin:

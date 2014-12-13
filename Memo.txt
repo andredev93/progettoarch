@@ -1,8 +1,8 @@
 Etichette
 46	main
 94	main_magazzino
- 109	main_coderr
- 116	main_cmdok
+ 109 main_coderr
+ 116 main_cmdok
 131 help
 137 cerca
  232 cerca_zeroprod
@@ -12,9 +12,15 @@ Etichette
 	321 inserisci_spaziosuff
 	329 inserisci_primaposizione
 	333 inserisci_inserimento
-	
 
+381 cancella ?
+390 aumenta
+	490 aumenta_numneg
+	499 aumenta_maxmag
+	524 aumenta_nontrovato
 
 Registri salvati
 cerca: s0, s1
 inserisci: s0, s1
+cancella: ?
+aumenta: s0, s1, s2, s3, s4, s5
