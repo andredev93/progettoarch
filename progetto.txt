@@ -82,3 +82,5 @@ LOG
 	refactor stringhe, main, cerca								DONE
 13-12
 	refactor inserisci, aumenta									DONE
+22-12
+	refactore diminuisci, valore, exit							DONE

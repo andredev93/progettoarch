@@ -15,12 +15,26 @@ Etichette
 
 381 cancella ?
 390 aumenta
-	490 aumenta_numneg
-	499 aumenta_maxmag
-	524 aumenta_nontrovato
+	494 aumenta_zeroprod
+	503 aumenta_numneg
+	511 aumenta_maxmag
+	535 aumenta_nontrovato
+556 diminuisci
+	649 diminuisci_zeroprod
+	657 diminuisci_numneg
+	664 diminuisci_minmag
+	683 diminuisci_nontrovato
+685 valore
+	733 valore_zeroprod
+	741 valore_res
+	760 valore_epilogo
+781 exit
+ 
 
 Registri salvati
 cerca: s0, s1
 inserisci: s0, s1
 cancella: ?
 aumenta: s0, s1, s2, s3, s4, s5
+diminuisci: s0, s1, s2, s3
+valore: s0, s1, s2

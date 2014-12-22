@@ -24,21 +24,17 @@ str_aumenta_qnt:		.asciiz "Inserire la quantita di prodotti da spostare in magaz
 str_aumenta_aumentato:	.asciiz "Aumentata la quantita del prodotto\n"
 str_aumenta_numneg:		.asciiz "Inserita una quantita negativa, spostamento prodotti annullato\n"
 str_aumenta_maxmag:		.asciiz "Non e' possibile aggiungere la quantita specificata di prodotti\nPosti rimanenti: "
+str_op_diminuisci: 		.asciiz "Diminusci quantita prodotto\n"
+str_diminuisci_qnt:		.asciiz "Inserire la quantita di prodotti da prelevare dal magazzino (numero positivo):\n"
+str_diminuisci_diminuito:.asciiz "Quantita del prodotto diminuita\n"
+str_diminuisci_minmag:	.asciiz "La quantita di prodotti da prelevare specificata e maggiore della quantita del prodotto in magazzino\nQuantita del prodotto: "
+str_op_valore: 			.asciiz "Valore del magazzino\n"
+str_valore_val: 		.asciiz "Il valore dei prodotti in magazzino e: "
+
+
+str_exit:				.asciiz "Fine programma\n"
 
 strcancella: 			.asciiz "cancella\n"
-
-
-strquantitaout:			.asciiz "inserire la quantità di prodotti da prelevare dal magazzino (numero positivo):\n"
-
-
-
-strdiminuisci: 			.asciiz "diminusci\n"
-strminmag:				.asciiz "la quantità di prodotti da prelevare specificata è maggiore della quantità del prodotto in magazzino\nquantità del prodotto: "
-strdiminuito:			.asciiz "quantità del prodotto diminuita\n"
-strvalore: 				.asciiz "valore magazzino\n"
-strvaloremag: 			.asciiz "il valore dei prodotti in magazzino è: "
-	
-strexit:				.asciiz "Fine programma\n"
 
 #########################################################################################################################################################################
 
@@ -555,113 +551,146 @@ aumenta_epilogo:
 
 diminuisci:
 # prologo
-	addi $sp, $sp, -12
-	sw $ra, 8($sp)
-	sw $s0, 4($sp)
-	sw $s1, 0($sp)
+	addi $sp, $sp, -20
+	sw $ra, 16($sp)
+	sw $s3, 12($sp)
+	sw $s2, 8($sp)
+	sw $s1, 4($sp)
+	sw $s0, 0($sp)
 	
-# stampa titolo
-	la $a0, strdiminuisci
+# stampa str_op_diminuisci
+	la $a0, str_op_diminuisci
 	li $v0, 4
 	syscall
 
-# stampa richiesta
+# controllo presenza prodotti in magazzino (indirizzo base == indirizzo limite)
+	lw $s0, 4($gp)			# $s0 = indirizzo base prodotti
+	lw $s1, 8($gp)			# $s1 = indirizzo limite prodotti
+	beq $s0, $s1, diminuisci_zeroprod	
+	
+# stampa str_cerca_askcod
 	la $a0, str_cerca_askcod
 	li $v0, 4
 	syscall
+
+# richiedi codice prodotto
 	li $v0, 5
 	syscall
 
 # $s0 = codice prodotto da aumentare
 	move $s0, $v0
 	
-# richiedi quantita
-	la $a0, strquantitaout
+# stampa str_diminuisci_qnt
+	la $a0, str_diminuisci_qnt
 	li $v0, 4
 	syscall
+
+# richiedi quantita da prelevare
 	li $v0, 5
 	syscall
 	
+# $s0 = codice prodotto da aumentare
 # $s1 = quantita da prelevare
 	move $s1, $v0
 	
-# controlla numero positivo
-	ble $s1, $zero, errnegdim
+# la quantita inserita deve essere positiva
+	ble $s1, $zero, diminuisci_numneg
 
 # cerca prodotto
+# call ricbin(*array, length, n)
 	lw $a0, 4($gp)
 	
-	lw $s2, 4($gp)
-	lw $s3, 8($gp)
-	sub $s2, $s3, $s2
-	li $s3, 20
-	div $s2, $s2, $s3				# $s2 = numero prodotti
+	lw $s2, 4($gp)				# $s2 = indirizzo base prodotti
+	lw $s3, 8($gp)				# $s3 = indirizzo limite prodotti
+	sub $s2, $s3, $s2			# $s2 = indirizzo limite - indirizzo base prodotti
+	li $t0, 20					# $t0 = dimensione struttura prodotto
+	div $s2, $s2, $t0			# $s2 = numero prodotti = length
 	move $a1, $s2
 	
 	move $a2, $s0
 	jal RicBin
 
-# controllo prodotto
-	beq $v0, $zero, errpntdim
+# controllo risultato ricerca: se è 0 allora il prodotto non è presente in magazzino
+	beq $v0, $zero, diminuisci_nontrovato
 
-# $s0 = indirizzo prodotto
-# $s2 = quantita prodotto in magazzino
-	move $s0, $v0
-	lw $s2, 12($s0)
+# $s0 = codice prodotto da aumentare
+# $s1 = quantita da prelevare
+# $s2 = numero prodotti
+# $s3 = indirizzo limite prodotti
+	move $s0, $v0				# $s0 = indirizzo prodotto
+	lw $s2, 12($s0)				# $s2 = quantita prodotto cercato in magazzino
 	
 # controllo quantita prodotto - quantita da prelevare >= 0
-	sub $s3, $s2, $s1
-	blt $s3, $zero, minmag
+	sub $s3, $s2, $s1			# $s3 = quantita prodotto - quantita da prelevare = nuova quantita prodotto
+	blt $s3, $zero, diminuisci_minmag
 	
-# preleva prodotto
+# se la quantita rimane positiva aggiorna la quantita del prodotto
+# $s3 = nuova quantita prodotto
 	sw $s3, 12($s0)
 	
 # modifica impostazioni magazzino
-	lhu $s3, 2($gp)
-	sub $s3, $s3, $s1
+# $s0 = codice prodotto da aumentare
+# $s1 = quantita da prelevare
+# $s2 = numero prodotti
+# $s3 = nuova quantita prodotto
+	lhu $s3, 2($gp)				# $s3 = quantita totale di prodotti in magazzino
+	sub $s3, $s3, $s1			# $s3 = quantita totale - quantita prelevata
 	sh $s3, 2($gp)
 
-# stampa stringa diminuito
-	la $a0, strdiminuito
+# stampa str_diminuisci_diminuito
+	la $a0, str_diminuisci_diminuito
 	li $v0, 4
 	syscall
-	j epilogodim
+	j diminuisci_epilogo
 
+# non sono presenti prodotti in magazzino
+diminuisci_zeroprod:
+#stampa str_cerca_zeroprod
+	la $a0, str_cerca_zeroprod
+	li $v0, 4
+	syscall
+	j diminuisci_epilogo
+	
 # è stata inserita una quantita negativa
-errnegdim:
+diminuisci_numneg:
 	la $a0, str_aumenta_numneg
 	li $v0, 4
 	syscall
-	j epilogodim
+	j diminuisci_epilogo
 
 # si prelevano più prodotti di quelli presenti in magazzino
-minmag:
-	la $a0, strminmag
+diminuisci_minmag:
+# stampa str_diminuisci_minmag
+	la $a0, str_diminuisci_minmag
 	li $v0, 4
 	syscall
 
-# stampa quantita prodotto in magazzino
-	add $a0, $zero, $s2
+# stampa quantita attuale del prodotto in magazzino
+# $s2 = numero prodotti
+	move $a0, $s2
 	li $v0, 1
 	syscall
 	
+# stampa newline
 	la $a0, newline
 	li $v0, 4
 	syscall
-	j epilogodim
+	j diminuisci_epilogo
 	
 # prodotto non in magazzino
-errpntdim:
+diminuisci_nontrovato:
 	la $a0, str_cerca_nontrovato
 	li $v0, 4
 	syscall
 
 # epilogo
-epilogodim:
-	lw $ra, 8($sp)
-	lw $s0, 4($sp)
-	lw $s1, 0($sp)
-	addi $sp, $sp, 12
+diminuisci_epilogo:
+	lw $ra, 16($sp)
+	lw $s3, 12($sp)
+	lw $s2, 8($sp)
+	lw $s1, 4($sp)
+	lw $s0, 0($sp)
+	addi $sp, $sp, 20
 	jr $ra
 
 #########################################################################################################################################################################
@@ -670,78 +699,90 @@ valore:
 # prologo
 	addi $sp, $sp, -16
 	sw $ra, 12($sp)
-	sw $s0, 8($sp)
+	sw $s2, 8($sp)
 	sw $s1, 4($sp)
 	sw $s0, 0($sp)
 	
 # stampa titolo
-	la $a0, strvalore
+	la $a0, str_op_valore
 	li $v0, 4
 	syscall
-	
-# $s0 = indirizzo primo prodotto
-# $s1 = indirizzo ultimo prodotto
-	lw $s0, 4($gp)
-	lw $s1, 8($gp)
 
-# controllo presenza prodotti in magazzino
-	beq $s0, $s1, noprod
+# controllo presenza prodotti in magazzino (indirizzo base == indirizzo limite)
+	lw $s0, 4($gp)			# $s0 = indirizzo base prodotti
+	lw $s1, 8($gp)			# $s1 = indirizzo limite prodotti
+	beq $s0, $s1, valore_zeroprod
+
+# calcola numero di prodotti
+# $s0 = indirizzo base prodotti
+# $s1 = indirizzo limite prodotti
+	sub $s1, $s1, $s0		# $s1 = indirizzo limite - indirizzo base
+	li $t0, 20				# $t0 = dimensione struttura prodotto
+	div $s1, $s1, $t0		# $s1 = numero prodotti
+	li $s2, 0				# $s2 = somma valori
 	
+valoreLoop:
+# calcola valore totale del prodotto corrente(quantita * valore)
 # $s0 = indirizzo prodotto corrente
-# $s1 = numero prodotti
-# $s2 = somma
-	sub $s1, $s1, $s0
-	li $s2, 20
-	div $s1, $s1, $s2
-	li $s2, 0
-
-valoreLoop:	
-# calcola valore totale del prodotto (quantita * valore)
-	lw $t0, 12($s0)
-	lw $t1, 16($s0)
-	mul $t0, $t0, $t1
+	lw $t0, 12($s0)			# $t0 = quantita prodotto
+	lw $t1, 16($s0)			# $t1 = valore prodotto
+	mul $t0, $t0, $t1		# $t0 = valore totale prodotto
 
 # somma valore del prodotto corrente al totale
-	add $s2, $s2, $t0
+# $s2 = somma valori
+	add $s2, $s2, $t0		# $s2 = valore prodotti precedenti + valore prodotto corrente
 	
 # controllo fine prodotti
-	addi $s1, $s1, -1
-	beq $s1, $zero, result
+# $s1 = numero prodotti
+	addi $s1, $s1, -1		# decrementa contatore (numero prodotti)
+	beq $s1, $zero, valore_res
 	
 # calcola indirizzo del prossimo prodotto
-	addi $s0, $s0, 20
+# $s0 = indirizzo prodotto corrente
+	addi $s0, $s0, 20		# $s0 = indirizzo prodotto corrente + dimensione struttura prodotto
 	j valoreLoop
 	
-noprod:
+# non ci sono prodotti in magazzino
+valore_zeroprod:
+# stampa str_cerca_zeroprod
 	la $a0, str_cerca_zeroprod
 	li $v0, 4
 	syscall
-	j valoreepilogo
+	j valore_epilogo
 	
-result:
-	la $a0, strvaloremag
+# stampa risultato valore magazzino
+valore_res:
+# stampa str_valore_val
+	la $a0, str_valore_val
 	li $v0, 4
 	syscall
-	
+
+# stampa valore
+# $s2 = valore magazzino
 	move $a0, $s2
 	li $v0, 1
 	syscall
 	
+# stampa newline
 	la $a0, newline
 	li $v0, 4
 	syscall
 	
-valoreepilogo:
-	lw $s2, 0($sp)
+valore_epilogo:
+	lw $s0, 0($sp)
 	lw $s1, 4($sp)
-	lw $s0, 8($sp)
+	lw $s2, 8($sp)
 	lw $ra, 12($sp)
+	addi $sp, $sp, 16
 	jr $ra
 
 exit:
-	la $a0, strexit
+# stampa
+	la $a0, str_exit
 	li $v0, 4
 	syscall
+
+# exit
 	li $v0, 10
 	syscall	
 
