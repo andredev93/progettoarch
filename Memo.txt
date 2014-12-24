@@ -29,6 +29,7 @@ Etichette
 	741 valore_res
 	760 valore_epilogo
 781 exit
+792 ricbin
  
 
 Registri salvati
@@ -38,3 +39,4 @@ cancella: ?
 aumenta: s0, s1, s2, s3, s4, s5
 diminuisci: s0, s1, s2, s3
 valore: s0, s1, s2
+ricbin: s0, s1, s2, s3, s4, s5

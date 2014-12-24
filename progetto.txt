@@ -83,4 +83,6 @@ LOG
 13-12
 	refactor inserisci, aumenta									DONE
 22-12
-	refactore diminuisci, valore, exit							DONE
+	refactor diminuisci, valore, exit							DONE
+24-12
+	refactor ricbin												DONE

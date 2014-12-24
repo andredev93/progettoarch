@@ -178,7 +178,7 @@ cerca:
 	move $a0, $s0
 	move $a1, $s1
 	move $a2, $v0
-	jal RicBin
+	jal ricbin
 
 	move $s1, $v0			# $s1 = risultato ricerca binaria
 
@@ -463,7 +463,7 @@ aumenta:
 	move $a1, $s3
 	
 	move $a2, $s0
-	jal RicBin
+	jal ricbin
 	
 # controllo risultato ricerca: se è 0 allora il prodotto non è presente in magazzino
 	beq $v0, $zero, aumenta_nontrovato
@@ -608,7 +608,7 @@ diminuisci:
 	move $a1, $s2
 	
 	move $a2, $s0
-	jal RicBin
+	jal ricbin
 
 # controllo risultato ricerca: se è 0 allora il prodotto non è presente in magazzino
 	beq $v0, $zero, diminuisci_nontrovato
@@ -789,7 +789,11 @@ exit:
 #########################################################################################################################################################################
 
 # ricerca binaria (*array, length, n)
-RicBin:
+ricbin:
+# $a0 = indirizzo primo prodotto
+# $a1 = numero prodotti
+# $a2 = codice prodotto ricercato
+
 # prologo
 	addi $sp, $sp, -28
 	sw $ra, 24($sp)				# save $ra
@@ -801,79 +805,97 @@ RicBin:
 	sw $s5, 0($sp)				# salva $s5
 
 # controlla numero di prodotti
+# $a1 = numero prodotti
 	li $t0, 1
-	bgt $a1, $t0, Ric			# se ci sono più di 1 prodotto vai a Ric
+	bgt $a1, $t0, ric			# se c'è più di 1 prodotto vai a ric
 	
 # controlla l'unico prodotto in magazzino
-	move $s1, $a0
-	lw $s2, 0($s1)
-	beq $a2, $s2, ReturnBase
-	j ReturnFalse
+# $a2 = codice prodotto ricercato
+	move $s1, $a0				# $s1 = indirizzo primo prodotto
+	lw $s2, 0($s1)				# $s2 = codice primo prodotto
+	beq $a2, $s2, ReturnBase	# prodotto trovato
+	j product_not_found				# prodotto non presente in magazzino
 	
-Ric:
-# $s0 = length / 2
-	srl $s0, $a1, 1
+ric:
+# dimezza array dei prodotti
+# $a1 = numero prodotti
+	srl $s0, $a1, 1				# $s0 = numero prodotti rimanenti / 2
 	
-# $s1 = $s0 * sizeof(prodotto)	
-	li $t0, 20
-	mul $s1, $s0, $t0
+# calcola offset dell'indirizzo del prodotto in posizione centrale
+# $s0 = nuova dimensione array
+# $s1 = indirizzo base prodotti
+	li $t0, 20					# $t0 = dimensione struttura prodotto
+	mul $s1, $s0, $t0			# $s1 = offset indirizzo prodotto centrale
 	
-# $s1 = &array[length / 2]
-# $s2 = array[length / 2]
-	add $s1, $a0, $s1		
-	lw $s2, 0($s1)
+# ricava prodotto centrale dell'array
+# $a0 = indirizzo primo prodotto
+# $s1 = offset indirizzo prodotto centrale
+	add $s1, $a0, $s1			# $s1 = indirizzo prodotto centrale
+	lw $s2, 0($s1)				# $s2 = prodotto centrale
 	
-# controlla se in $s2 c'è l'elemento cercato
+# controlla se il prodotto centrale è quello cercato
 	beq $a2, $s2, ReturnBase
 
-# ricerca a destra
-	bgt $a2, $s2, SearchDx
+# se il prodotto cercato non è in posizione centrale controlla l'indice: se è maggiore, ricerca nella parte destra dell'array
+# $a2 = codice prodotto ricercato
+# $s2 = prodotto centrale
+	bgt $a2, $s2, search_dx
 
-# ricerca a sinistra	
+# se il prodotto cercato non è in posizione centrale controlla l'indice: se è minore, ricerca nella parte sinistra dell'array
+# ricbin(*array, new_length, n)
+# $s0 = nuova dimensione array
 	move $a1, $s0
-	jal RicBin
+	jal ricbin
 	
-# controlla risultato
-	beq $v0, $zero, ReturnFalse
-	j ReturnTrue
+# controlla risultato: se ritorna 0 il prodotto non è in magazzino
+	beq $v0, $zero, product_not_found
+	j product_found
+
+# ricerca nella parte destra dell'array rimanente	
+search_dx:
+# controlla se si è raggiunto la fine dell'array
+# $s1 = indirizzo prodotto centrale
+	lw $s3, 8($gp)				# $s3 = indirizzo ultimo prodotto
+	addi $s4, $s1, 20			# $s4 = indirizzo primo prodotto della parte destra dell'array
+	bge $s4, $s3, product_not_found
 	
-SearchDx:
-	lw $s3, 8($gp)		# $s3 = indirizzo limite
-	addi $s4, $s1, 20	# $s4 = &array[length / 2 + 1]
-	bge $s4, $s3, ReturnFalse
-	
-# $s5 = length % 2
+# controlla se c'è un numero pari o dispari di prodotti
+# $a1 = numero prodotti
 	li $t0, 2
 	div $a1, $t0
-	mfhi $s5
-
-# controlla se $s4 è pari o dispari
-	beq $s5, $zero, Pari
+	mfhi $s5					# $s5 = numero prodotti modulo 2
+	beq $s5, $zero, pari
 	
-# RicBin(array[length / 2 + 1], length / 2, n)
-	move $a0, $s4			
+# ricbin(array[length / 2 + 1], length / 2, n)
+# $s0 = nuova dimensione array
+# $s4 = indirizzo primo prodotto della parte destra dell'array
+	move $a0, $s4
 	move $a1, $s0
-	jal RicBin
+	jal ricbin
 	
 # controllo risultati
-	beq $v0, $zero, ReturnFalse
-	j ReturnTrue
+	beq $v0, $zero, product_not_found
+	j product_found
 	
-Pari:
-# RicBin(array[length / 2 + 1], length / 2 - 1, n)
+pari:
+# ricbin(array[length / 2 + 1], length / 2 - 1, n)
+# $s0 = nuova dimensione array
+# $s4 = indirizzo primo prodotto della parte destra dell'array
 	move $a0, $s4				
 	addi $a1, $s0, -1
-	jal RicBin
+	jal ricbin
 	
 # controllo risultati
-	beq $v0, $zero, ReturnFalse
-	j ReturnTrue	
+	beq $v0, $zero, product_not_found
+	j product_found	
 	
+# prodotto trovato, return indirizzo prodotto
 ReturnBase:
+	# $s1 = indirizzo prodotto
 	move $v0, $s1
 	
-ReturnTrue:
-# epilogo	
+product_found:
+# epilogo
 	lw $ra, 24($sp)
 	lw $s0, 20($sp)
 	lw $s1, 16($sp)
@@ -884,7 +906,7 @@ ReturnTrue:
 	addi $sp, $sp, 28
 	jr $ra
 
-ReturnFalse:
+product_not_found:
 # epilogo
 	lw $ra, 24($sp)
 	lw $s0, 20($sp)
@@ -895,5 +917,5 @@ ReturnFalse:
 	lw $s5, 0($sp)
 	addi $sp, $sp, 28
 	
-	li $v0, 0
+	li $v0, 0		# return 0
 	jr $ra
