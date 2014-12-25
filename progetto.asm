@@ -393,7 +393,7 @@ aumenta:
 	li $v0, 4
 	syscall
 	
-# controlla numero di prodotti: se indirizzo base e indirizzo limite sono diversi allora sono presenti prodotti
+# controlla numero di prodotti
 	lhu $s0, 6($gp)		# $s0 = numero prodotti
 	beq $s0, $zero, aumenta_zeroprod
 	
@@ -543,10 +543,9 @@ diminuisci:
 	li $v0, 4
 	syscall
 
-# controllo presenza prodotti in magazzino (indirizzo base == indirizzo limite)
-	lw $s0, 8($gp)			# $s0 = indirizzo base prodotti
-	lw $s1, 12($gp)			# $s1 = indirizzo limite prodotti
-	beq $s0, $s1, diminuisci_zeroprod	
+# controlla numero di prodotti
+	lhu $s0, 6($gp)		# $s0 = numero prodotti
+	beq $s0, $zero, diminuisci_zeroprod	
 	
 # stampa str_cerca_askcod
 	la $a0, str_cerca_askcod
@@ -579,14 +578,7 @@ diminuisci:
 # cerca prodotto
 # call ricbin(*array, length, n)
 	lw $a0, 8($gp)
-	
-	lw $s2, 8($gp)				# $s2 = indirizzo base prodotti
-	lw $s3, 12($gp)				# $s3 = indirizzo limite prodotti
-	sub $s2, $s3, $s2			# $s2 = indirizzo limite - indirizzo base prodotti
-	li $t0, 20					# $t0 = dimensione struttura prodotto
-	div $s2, $s2, $t0			# $s2 = numero prodotti = length
-	move $a1, $s2
-	
+	lhu $a1, 6($gp)
 	move $a2, $s0
 	jal ricbin
 
@@ -688,17 +680,14 @@ valore:
 	li $v0, 4
 	syscall
 
-# controllo presenza prodotti in magazzino (indirizzo base == indirizzo limite)
-	lw $s0, 8($gp)			# $s0 = indirizzo base prodotti
-	lw $s1, 12($gp)			# $s1 = indirizzo limite prodotti
-	beq $s0, $s1, valore_zeroprod
+# controlla numero di prodotti
+	lw $s0, 8($gp)		# $s0 = indirizzo base prodotti
+	lhu $s1, 6($gp)		# $s1 = numero prodotti
+	beq $s1, $zero, valore_zeroprod
 
-# calcola numero di prodotti
+# inizializza somma
 # $s0 = indirizzo base prodotti
-# $s1 = indirizzo limite prodotti
-	sub $s1, $s1, $s0		# $s1 = indirizzo limite - indirizzo base
-	li $t0, 20				# $t0 = dimensione struttura prodotto
-	div $s1, $s1, $t0		# $s1 = numero prodotti
+# $s1 = numero prodotti
 	li $s2, 0				# $s2 = somma valori
 	
 valoreLoop:
