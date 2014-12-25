@@ -144,22 +144,17 @@ cerca:
 	sw $s1, 4($sp)
 	sw $s0, 0($sp)
 	
-# stampa titolo cerca
+# stampa str_op_cerca
 	la $a0, str_op_cerca
 	li $v0, 4
 	syscall
 	
-# controlla numero di prodotti: se indirizzo base e indirizzo limite sono diversi allora sono presenti prodotti
-	lw $s0, 8($gp)			# $s0 = indirizzo base prodotti			
-	lw $s1, 12($gp)			# $s1 = indirizzo limite prodotti			
-	beq $s0, $s1, cerca_zeroprod
+# controlla numero di prodotti
+	lhu $s0, 6($gp)			# $s0 = numero prodotti
+	beq $s0, $zero, cerca_zeroprod
 	
-# sono presenti prodotti in magazzino
-# $s0 = indirizzo base prodotti
-# $s1 = indirizzo limite prodotti
-	sub $s1, $s1, $s0		# $s1 = indirizzo limite - indirizzo base
-	li $t0, 20
-	div $s1, $s1, $t0		# $s1 = $s1 / (dimensione struttura prodotto = 20) = numero prodotti
+# sono presenti prodotti in magazzino: ricava indirizzo base
+	lw $s1, 8($gp)
 
 # richiesta prodotto da ricercare
 	la $a0, str_cerca_askcod
@@ -171,11 +166,11 @@ cerca:
 	syscall
 
 # call ricbin(*array, length, n)
-# $s0 = indirizzo base prodotti
-# $s1 = numero prodotti = lunghezza array
+# $s0 = numero prodotti = length
+# $s1 = indirizzo base prodotti
 # $v0 = codice prodotto da cercare
-	move $a0, $s0
-	move $a1, $s1
+	move $a0, $s1
+	move $a1, $s0
 	move $a2, $v0
 	jal ricbin
 
