@@ -57,3 +57,5 @@ LOG
 	refactor diminuisci, valore, exit							DONE
 24-12
 	refactor ricbin												DONE
+25-12
+	aggiornate impostazioni

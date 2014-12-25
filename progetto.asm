@@ -783,7 +783,7 @@ ricbin:
 	move $s1, $a0				# $s1 = indirizzo primo prodotto
 	lw $s2, 0($s1)				# $s2 = codice primo prodotto
 	beq $a2, $s2, ReturnBase	# prodotto trovato
-	j product_not_found				# prodotto non presente in magazzino
+	j product_not_found			# prodotto non presente in magazzino
 	
 ric:
 # dimezza array dei prodotti
