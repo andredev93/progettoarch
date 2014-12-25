@@ -291,47 +291,37 @@ inserisci:
 	li $v0, 4
 	syscall
 
-# controlla numero di prodotti: se indirizzo base e indirizzo limite sono uguali allora si deve inserire il nuovo prodotto all'inizio
-	lw $s0, 8($gp)		# $s0 = indirizzo base prodotti
-	lw $s1, 12($gp)		# $s1 = indirizzo limite prodotti
-	beq $s0, $s1, inserisci_primaposizione
+# controlla numero di prodotti: se è zero si deve inserire il nuovo prodotto all'inizio
+	lhu $s0, 6($gp)
+	beq $s0, $zero, inserisci_primaposizione
 
-# se non è il primo prodotto calcola i dati necessari per controllare se c'è spazio per l'inserimento
-# $s0 = indirizzo base prodotti
-# $s1 = indirizzo limite prodotti
-	sub $s0, $s1, $s0	# $s0 = indirizzo limite - indirizzo base prodotti
-	li $s1, 20			# $s1 = dimensione struttura prodotto
-	div $s0, $s0, $s1	# $s0 = numero di prodotti
-	li $s1, 10			# $s1 = dimensione base array prodotti
-	div $s0, $s1
-	mfhi $s1			# $s1 = numero di prodotti modulo dimensione base array
+# se non è il primo prodotto calcola se c'è spazio per l'inserimento
+# $s0 = numero prodotti
+	lhu $s1, 4($gp)		# $s1 = prodotti inseribili in memoria
+	blt $s0, $s1, inserisci_spaziosuff
 	
-# controlla se c'è spazio per l'inserimento: il numero di prodotti modulo 10 non deve essere 9
-# $s0 = numero di prodotti
-# $s1 = numero di prodotti modulo dimensione base array
-	li $t0, 9			# $t0 = limite prodotti
-	bne $s1, $t0, inserisci_spaziosuff
-	
-# alloca spazio per altri 10 prodotti
+# se non c'è spazio alloca spazio per altri 10 prodotti
+# $s1 = prodotti inseribili in memoria
 	li $a0, 200
 	li $v0, 9
-	syscall	
+	syscall
+	addi $s1, $s1, 10
+	sh $s1, 4($gp)
 	
 inserisci_spaziosuff:
 # l'indirizzo in cui inserire il prodotto è in fondo alla lista
-# $s0 = numero di prodotti
-# $s1 = numero di prodotti modulo dimensione base array
 	lw $s1, 12($gp)		# $s1 = indirizzo dove inserire il prodotto (posizione limite)
 	j inserisci_inserimento
 
 inserisci_primaposizione:
 # codice prodotto di default
 	li $s0, 0			# $s0 = 0 = codice del primo prodotto
+	lw $s1, 8($gp)		# $s1 = indirizzo base prodotti
 
 inserisci_inserimento:
-# salva codice prodotto
 # $s0 = codice prodotto
 # $s1 = indirizzo dove inserire il prodotto
+# salva codice prodotto
 	sw $s0, 0($s1)
 
 # stampa str_inserisci_asknome
@@ -369,6 +359,11 @@ inserisci_inserimento:
 	addi $s1, $s1, 20	# $s1 = indirizzo prodotto successivo, nuovo indirizzo limite
 	sw $s1, 12($gp)
 
+# aggiorna numero prodotti
+	lhu $s0, 6($gp)
+	addi $s0, $s0, 1
+	sh $s0, 6($gp)
+	
 # epilogo
 	lw $ra, 8($sp)
 	lw $s1, 4($sp)
