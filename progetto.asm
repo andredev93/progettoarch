@@ -1,5 +1,5 @@
 .data
-titolo: 				.asciiz "GESTIONE MAGAZZINO\n"
+titolo:					.asciiz "GESTIONE MAGAZZINO\n"
 operazioni: 			.space 32
 	
 newline:				.asciiz "\n"
@@ -30,18 +30,12 @@ str_diminuisci_diminuito:.asciiz "Quantita del prodotto diminuita\n"
 str_diminuisci_minmag:	.asciiz "La quantita di prodotti da prelevare specificata e maggiore della quantita del prodotto in magazzino\nQuantita del prodotto: "
 str_op_valore: 			.asciiz "Valore del magazzino\n"
 str_valore_val: 		.asciiz "Il valore dei prodotti in magazzino e: "
-
-
 str_exit:				.asciiz "Fine programma\n"
+
 
 strcancella: 			.asciiz "cancella\n"
 
 #########################################################################################################################################################################
-
-# 0($gp) <-> |capienza| 					-> 2 byte in 0x10040000
-# 2($gp) <-> |quantità prodotti|			-> 2 byte in 0x10040002
-# 4($gp) <-> |indirizzo base prodotti|  	-> 4 byte in 0x10040004
-# 8($gp) <-> |indirizzo limite prodotti|  	-> 4 byte in 0x10040008
 
 .text
 main:
@@ -51,7 +45,7 @@ main:
 	syscall
 	
 # inizializzazione impostazioni
-# quantità prodotti  = 0x0000 in 2($gp)
+# quantità prodotti = 0x0000 in 2($gp)
 # massima capienza = 0xFFFF in 0($gp)
 	li $t0, 0xFFFF
 	sw $t0, 0($gp)
@@ -62,8 +56,13 @@ main:
 	li $v0, 9
 	syscall
 	move $t0, $v0		# $t0 = indirizzo memoria allocata
-	sw $t0, 4($gp)
 	sw $t0, 8($gp)
+	sw $t0, 12($gp)
+
+# numero prodotti = 0x0000 in 6($gp)
+# posti in memoria = 0x000A in 4($gp)
+	li $t0, 0xA
+	sw $t0, 4($gp)
 	
 # inizializzazione jump address table delle operazioni disponibili
 	la $t0, operazioni	# $t0 = indirizzo base jump address table
@@ -151,8 +150,8 @@ cerca:
 	syscall
 	
 # controlla numero di prodotti: se indirizzo base e indirizzo limite sono diversi allora sono presenti prodotti
-	lw $s0, 4($gp)			# $s0 = indirizzo base prodotti			
-	lw $s1, 8($gp)			# $s1 = indirizzo limite prodotti			
+	lw $s0, 8($gp)			# $s0 = indirizzo base prodotti			
+	lw $s1, 12($gp)			# $s1 = indirizzo limite prodotti			
 	beq $s0, $s1, cerca_zeroprod
 	
 # sono presenti prodotti in magazzino
@@ -287,14 +286,14 @@ inserisci:
 	sw $s1, 4($sp)
 	sw $s0, 0($sp)
 
-# stampa titolo operazione
+# stampa str_op_inserisci
 	la $a0, str_op_inserisci
 	li $v0, 4
 	syscall
 
 # controlla numero di prodotti: se indirizzo base e indirizzo limite sono uguali allora si deve inserire il nuovo prodotto all'inizio
-	lw $s0, 4($gp)		# $s0 = indirizzo base prodotti
-	lw $s1, 8($gp)		# $s1 = indirizzo limite prodotti
+	lw $s0, 8($gp)		# $s0 = indirizzo base prodotti
+	lw $s1, 12($gp)		# $s1 = indirizzo limite prodotti
 	beq $s0, $s1, inserisci_primaposizione
 
 # se non è il primo prodotto calcola i dati necessari per controllare se c'è spazio per l'inserimento
@@ -322,7 +321,7 @@ inserisci_spaziosuff:
 # l'indirizzo in cui inserire il prodotto è in fondo alla lista
 # $s0 = numero di prodotti
 # $s1 = numero di prodotti modulo dimensione base array
-	lw $s1, 8($gp)		# $s1 = indirizzo dove inserire il prodotto (posizione limite)
+	lw $s1, 12($gp)		# $s1 = indirizzo dove inserire il prodotto (posizione limite)
 	j inserisci_inserimento
 
 inserisci_primaposizione:
@@ -368,7 +367,7 @@ inserisci_inserimento:
 # $s0 = codice prodotto
 # $s1 = indirizzo dove inserire il prodotto
 	addi $s1, $s1, 20	# $s1 = indirizzo prodotto successivo, nuovo indirizzo limite
-	sw $s1, 8($gp)
+	sw $s1, 12($gp)
 
 # epilogo
 	lw $ra, 8($sp)
@@ -405,8 +404,8 @@ aumenta:
 	syscall
 	
 # controlla numero di prodotti: se indirizzo base e indirizzo limite sono diversi allora sono presenti prodotti
-	lw $s0, 4($gp)			# $s0 = indirizzo base prodotti			
-	lw $s1, 8($gp)			# $s1 = indirizzo limite prodotti			
+	lw $s0, 8($gp)			# $s0 = indirizzo base prodotti			
+	lw $s1, 12($gp)			# $s1 = indirizzo limite prodotti			
 	beq $s0, $s1, aumenta_zeroprod
 	
 # stampa str_cerca_askcod
@@ -452,11 +451,11 @@ aumenta:
 # $s2 = quantita prodotti attuali
 # $s3 = capienza massima
 # $s4 = prodotti attuali + prodotti da inserire
-	lw $a0, 4($gp)
+	lw $a0, 8($gp)
 	
 # calcola lunghezza array (numero prodotti)
-	lw $s3, 4($gp)			# $s3 = indirizzo base prodotti
-	lw $s5, 8($gp)			# $s5 = indirizzo limite prodotti
+	lw $s3, 8($gp)			# $s3 = indirizzo base prodotti
+	lw $s5, 12($gp)			# $s5 = indirizzo limite prodotti
 	sub $s3, $s5, $s3		# $s3 = indirizzo limite - indirizzo base
 	li $s5, 20				# $s5 = dimensione struttura prodotto
 	div $s3, $s3, $s5		# $s3 = lunghezza array
@@ -564,8 +563,8 @@ diminuisci:
 	syscall
 
 # controllo presenza prodotti in magazzino (indirizzo base == indirizzo limite)
-	lw $s0, 4($gp)			# $s0 = indirizzo base prodotti
-	lw $s1, 8($gp)			# $s1 = indirizzo limite prodotti
+	lw $s0, 8($gp)			# $s0 = indirizzo base prodotti
+	lw $s1, 12($gp)			# $s1 = indirizzo limite prodotti
 	beq $s0, $s1, diminuisci_zeroprod	
 	
 # stampa str_cerca_askcod
@@ -598,10 +597,10 @@ diminuisci:
 
 # cerca prodotto
 # call ricbin(*array, length, n)
-	lw $a0, 4($gp)
+	lw $a0, 8($gp)
 	
-	lw $s2, 4($gp)				# $s2 = indirizzo base prodotti
-	lw $s3, 8($gp)				# $s3 = indirizzo limite prodotti
+	lw $s2, 8($gp)				# $s2 = indirizzo base prodotti
+	lw $s3, 12($gp)				# $s3 = indirizzo limite prodotti
 	sub $s2, $s3, $s2			# $s2 = indirizzo limite - indirizzo base prodotti
 	li $t0, 20					# $t0 = dimensione struttura prodotto
 	div $s2, $s2, $t0			# $s2 = numero prodotti = length
@@ -709,8 +708,8 @@ valore:
 	syscall
 
 # controllo presenza prodotti in magazzino (indirizzo base == indirizzo limite)
-	lw $s0, 4($gp)			# $s0 = indirizzo base prodotti
-	lw $s1, 8($gp)			# $s1 = indirizzo limite prodotti
+	lw $s0, 8($gp)			# $s0 = indirizzo base prodotti
+	lw $s1, 12($gp)			# $s1 = indirizzo limite prodotti
 	beq $s0, $s1, valore_zeroprod
 
 # calcola numero di prodotti
@@ -855,7 +854,7 @@ ric:
 search_dx:
 # controlla se si è raggiunto la fine dell'array
 # $s1 = indirizzo prodotto centrale
-	lw $s3, 8($gp)				# $s3 = indirizzo ultimo prodotto
+	lw $s3, 12($gp)				# $s3 = indirizzo ultimo prodotto
 	addi $s4, $s1, 20			# $s4 = indirizzo primo prodotto della parte destra dell'array
 	bge $s4, $s3, product_not_found
 	
@@ -916,6 +915,7 @@ product_not_found:
 	lw $s4, 4($sp)
 	lw $s5, 0($sp)
 	addi $sp, $sp, 28
-	
-	li $v0, 0		# return 0
+
+# return 0
+	li $v0, 0
 	jr $ra

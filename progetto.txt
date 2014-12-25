@@ -1,11 +1,5 @@
 http://chortle.ccsu.edu/AssemblyTutorial/index.html#part9
 
-gestione magazzino:
-codice prodotto
-nome prodotto
-quantità
-valore
-
 struct prodotto {			20 byte
 	int codice_prodotto;	4 byte
 	string nome_prodotto;	8 byte
@@ -24,33 +18,10 @@ valore magazzino
 tetto capienza magazzino = x max 65535 (FFFF -> half word)
 numero prodotti = y max 65535 (FFFF -> half word)
 
-ricerca(id) {
-	cerca prodotto o posizione in cui inserire un prodotto
-	v0 = 0/1
-	v1 = indirizzo prodotto
-}
-
-inserisci(id, nome) {
-	ricerca(id)
-	sposta_memoria_avanti(id + 1)
-	inserisci
-}
-
-cancella(id) {
-	ricerca(id)
-	cancella
-	sposta_memoria_indietro(id + 1)
-}
-
-aumenta(id) {
-	ricerca(id)
-	controlla_tetto
-}
-
-diminuisci(id) {
-	ricerca(id)
-	controllo vuoto
-}
+# 0($gp) <-> |capienza| 					-> 2 byte in 0x10040000
+# 2($gp) <-> |quantità prodotti|			-> 2 byte in 0x10040002
+# 4($gp) <-> |indirizzo base prodotti|  	-> 4 byte in 0x10040004
+# 8($gp) <-> |indirizzo limite prodotti|  	-> 4 byte in 0x10040008
 
 *********************************
 Processo
