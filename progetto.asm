@@ -287,7 +287,7 @@ inserisci:
 	syscall
 
 # controlla numero di prodotti: se è zero si deve inserire il nuovo prodotto all'inizio
-	lhu $s0, 6($gp)
+	lhu $s0, 6($gp)		# $s0 = numero prodotti
 	beq $s0, $zero, inserisci_primaposizione
 
 # se non è il primo prodotto calcola se c'è spazio per l'inserimento
@@ -394,9 +394,8 @@ aumenta:
 	syscall
 	
 # controlla numero di prodotti: se indirizzo base e indirizzo limite sono diversi allora sono presenti prodotti
-	lw $s0, 8($gp)			# $s0 = indirizzo base prodotti			
-	lw $s1, 12($gp)			# $s1 = indirizzo limite prodotti			
-	beq $s0, $s1, aumenta_zeroprod
+	lhu $s0, 6($gp)		# $s0 = numero prodotti
+	beq $s0, $zero, aumenta_zeroprod
 	
 # stampa str_cerca_askcod
 	la $a0, str_cerca_askcod
@@ -404,11 +403,10 @@ aumenta:
 	syscall
 	
 # richiedi codice prodotto
-# $s0 = indirizzo base prodotti	
-# $s1 = indirizzo limite prodotti
+# $s0 = numero prodotti
 	li $v0, 5
 	syscall
-	move $s0, $v0 # $s0 = codice prodotto da aumentare
+	move $s0, $v0 		# $s0 = codice prodotto da aumentare
 
 # stamp str_aumenta_qnt
 	la $a0, str_aumenta_qnt
@@ -444,13 +442,7 @@ aumenta:
 	lw $a0, 8($gp)
 	
 # calcola lunghezza array (numero prodotti)
-	lw $s3, 8($gp)			# $s3 = indirizzo base prodotti
-	lw $s5, 12($gp)			# $s5 = indirizzo limite prodotti
-	sub $s3, $s5, $s3		# $s3 = indirizzo limite - indirizzo base
-	li $s5, 20				# $s5 = dimensione struttura prodotto
-	div $s3, $s3, $s5		# $s3 = lunghezza array
-	move $a1, $s3
-	
+	lhu $a1, 6($gp)		# $a1 = numero prodotti = length
 	move $a2, $s0
 	jal ricbin
 	
@@ -463,7 +455,6 @@ aumenta:
 # $s2 = quantita prodotti attuali
 # $s3 = indirizzo limite - indirizzo base
 # $s4 = prodotti attuali + prodotti da inserire
-# $s5 = dimensione struttura prodotto
 	move $s0, $v0			# $s0 = indirizzo prodotto
 	lw $s2, 12($s0)			# $s2 = quantita attuale prodotto
 	add $s2, $s2, $s1		# $s2 = quantita finale prodotto
