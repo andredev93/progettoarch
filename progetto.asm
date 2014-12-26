@@ -18,6 +18,8 @@ str_op_inserisci: 		.asciiz "Inserisci prodotto\n"
 str_inserisci_asknome:	.asciiz "Inserire il nome del prodotto (max 7 caratteri)\n"
 str_inserisci_val:		.asciiz "Inserire il valore del prodotto (intero)\n"
 str_inserisci_inserito:	.asciiz "Prodotto inserito\n"
+str_op_cancella: 		.asciiz "Cancella prodotto\n"
+str_cancella_nomeprod:	.asciiz "Cancellando il prodotto: "
 
 str_op_aumenta: 		.asciiz "Aumenta quantita prodotto\n"
 str_aumenta_qnt:		.asciiz "Inserire la quantita di prodotti da spostare in magazzino (numero positivo):\n"
@@ -31,9 +33,6 @@ str_diminuisci_minmag:	.asciiz "La quantita di prodotti da prelevare specificata
 str_op_valore: 			.asciiz "Valore del magazzino\n"
 str_valore_val: 		.asciiz "Il valore dei prodotti in magazzino e: "
 str_exit:				.asciiz "Fine programma\n"
-
-
-strcancella: 			.asciiz "cancella\n"
 
 #########################################################################################################################################################################
 
@@ -369,10 +368,148 @@ inserisci_inserimento:
 #########################################################################################################################################################################
 
 cancella:
+# prologo
+	addi $sp, $sp, -16
+	sw $ra, 12($sp)
+	sw $s2, 8($sp)
+	sw $s1, 4($sp)
+	sw $s0, 0($sp)
+
 # stampa
-	la $a0, strcancella
+	la $a0, str_op_cancella
 	li $v0, 4
 	syscall
+	
+# controlla numero di prodotti
+	lhu $s0, 6($gp)			# $s0 = numero prodotti
+	beq $s0, $zero, cancella_zeroprod
+	
+# se ci sono prodotti richiedu prodotto da ricercare
+	la $a0, str_cerca_askcod
+	li $v0, 4
+	syscall
+	
+# richiedi codice prodotto
+	li $v0, 5
+	syscall
+	
+# ricava indirizzo base prodotti
+	lw $s1, 8($gp)			# $s1 = indirizzo base prodotti
+
+# call ricbin(*array, length, n)
+# $s0 = numero prodotti = length
+# $s1 = indirizzo base prodotti
+# $v0 = codice prodotto da cercare
+	move $a0, $s1
+	move $a1, $s0
+	move $a2, $v0
+	jal ricbin
+
+	move $s0, $v0			# $s0 = risultato ricerca binaria
+
+# se il risultato è 0 il prodotto non è in magazzino
+	beq $s0, $zero, cancella_nontrovato	
+	
+# se si trova il prodotto cancella i suoi dati aggiornando le impostazioni
+# cancella codice prodotto
+# $s0 = indirizzo prodotto da cancellare
+	sw $zero, 0($s0)
+
+# indica che prodotto si sta cancellando
+# stampa str_cancella_nomeprod
+	la $a0, str_cancella_nomeprod
+	li $v0, 4
+	syscall
+
+# stampa nome prodotto
+	addi $s1, $s0, 4		# $s1 = indirizzo nome prodotto
+	move $a0, $s1
+	li $v0, 4
+	syscall
+	
+# stampa newline
+	la $a0, newline
+	li $v0, 4
+	syscall	
+	
+# cancella nome prodotto
+# $s0 = indirizzo prodotto da cancellare
+	sw $zero, 4($s0)
+	sw $zero, 8($s0)
+	
+# decrementa quantità prodotti in magazzino
+	lw $s1, 12($s0)			# $s1 = quantità prodotto
+	lhu $s2, 2($gp)			# $s2 = quantità prodotti in magazzino
+	sub $s2, $s2, $s1		# $s2 = nuova quantità
+	sh $s2, 2($gp)
+	sw $zero, 12($s0)		# cancella quantità prodotto
+	
+# cancella valore prodotto
+	sw $zero, 16($s0)		# cancella valore
+	
+# decrementa numero di prodotti
+	lhu $s1, 6($gp)			# $s1 = numero prodotti
+	sub $s1, $s1, 1			# $s1 = nuovo numero prodotti
+	sh $s1, 6($gp)
+
+# sposta i prodotti successivi indietro di una posizione dell'array a partire dall'indirizzo in $s0
+# ricava indirizzo limite prodotti
+	lw $s2, 12($gp)			# $s2 = indirizzo limite
+	
+cancella_loop:
+# $s0 = indirizzo prodotto cancellato = indirizzo spazio vuoto
+	addi $s1, $s0, 20		# $s1 = indirizzo prodotto successivo
+	
+# controlla se si sono spostati tutti i prodotti
+# $s1 = indirizzo prodotto successivo
+# $s2 = indirizzo limite
+	beq $s1, $s2, cancella_end
+	
+# ricava dati prodotto successivo
+	lw $t0, 0($s1)			# $t0 = codice prodotto
+	lw $t1, 4($s1)			# $t1 = prima metà del nome
+	lw $t2, 8($s1)			# $t2 = seconda metà del nome
+	lw $t3, 12($s1)			# $t3 = quantità prodotto
+	lw $t4, 16($s1)			# $t4 = valore prodotto
+
+# copia dati del prodotto nello spazio vuoto
+	sw $t0, 0($s0)			# copia codice prodotto
+	sw $t1, 4($s0)			# copia nome
+	sw $t2, 8($s0)
+	sw $t3, 12($s0)			# copia quantità
+	sw $t4, 16($s0)			# copia valore
+
+# avanza indirizzi
+	move $s0, $s1
+	j cancella_loop
+
+cancella_end:	
+# aggiorna indirizzo limite
+	sub $s2, $s2, 20
+	sw $s2, 12($gp)
+	j cancella_epilogo
+	
+cancella_zeroprod:
+# non sono presenti prodotti in magazzino
+# stampa str_cerca_zeroprod
+	la $a0, str_cerca_zeroprod
+	li $v0, 4
+	syscall
+	j cancella_epilogo
+
+cancella_nontrovato:
+# stampa str_cerca_nontrovato
+	la $a0, str_cerca_nontrovato
+	li $v0, 4
+	syscall
+	
+cancella_epilogo:
+# epilogo
+	lw $ra, 12($sp)
+	lw $s2, 8($sp)
+	lw $s1, 4($sp)
+	lw $s0, 0($sp)
+	addi $sp, $sp, 16
 	jr $ra
 
 #########################################################################################################################################################################

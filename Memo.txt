@@ -13,7 +13,13 @@ Etichette
 	329 inserisci_primaposizione
 	333 inserisci_inserimento
 
-381 cancella ?
+369 cancella (versione cancella cella)
+	409 cancella_zeroprod
+	417 cancella_nontrovato
+	423 cancella_epilogo
+	456 cancella_loop
+	482 cancella_end
+	
 390 aumenta
 	494 aumenta_zeroprod
 	503 aumenta_numneg
@@ -35,7 +41,7 @@ Etichette
 Registri salvati
 cerca: s0, s1
 inserisci: s0, s1
-cancella: ?
+cancella: s0, s1, s2
 aumenta: s0, s1, s2, s3, s4, s5
 diminuisci: s0, s1, s2, s3
 valore: s0, s1, s2
