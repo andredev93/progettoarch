@@ -14,16 +14,18 @@ cancellazione prodotto
 aggiunta quantita
 diminuzione quantita
 valore magazzino
+riempimento automatico
 
 tetto capienza magazzino = x max 65535 (FFFF -> half word)
-numero prodotti = y max 65535 (FFFF -> half word)
+quantità prodotti = y max 65535 (FFFF -> half word)
 
 # 0($gp) <-> |capienza| 					-> 2 byte in 0x10040000
 # 2($gp) <-> |quantità prodotti|			-> 2 byte in 0x10040002
 # 4($gp) <-> |capienza memoria|				-> 2 byte in 0x10040004
 # 6($gp) <-> |numero prodotti|				-> 2 byte in 0x10040006
-# 8($gp) <-> |indirizzo base prodotti|  	-> 4 byte in 0x10040008
-# 12($gp) <-> |indirizzo limite prodotti|  	-> 4 byte in 0x100400012
+# 8($gp) <-> |prossimo codice disponibile|	-> 4 byte in 0x10040008
+# 12($gp) <-> |indirizzo base prodotti|  	-> 4 byte in 0x1004000c
+# 16($gp) <-> |indirizzo limite prodotti|  	-> 4 byte in 0x100400010
 
 *********************************
 Processo
@@ -63,3 +65,5 @@ LOG
 	aggiornate impostazioni
 26-12
 	cancella (con errore codici nuovi prodotti)
+30-12
+	gestione codici, autofill

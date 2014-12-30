@@ -1,11 +1,11 @@
 .data
 titolo:					.asciiz "GESTIONE MAGAZZINO\n"
-operazioni: 			.space 32
+operazioni: 			.space 36
 	
 newline:				.asciiz "\n"
 str_main_askcod:		.asciiz "\nInserire il codice dell'operazione da eseguire:\n"
 str_main_coderr:		.asciiz "Codice errato: inserire valore tra 0 e 7\n"
-str_op_help:			.asciiz "Operazioni possibili:\n0 -> help\n1 -> cerca prodotto\n2 -> inserisci nuovo prodotto\n3 -> cancella prodotto\n4 -> aumenta quantita di un prodotto\n5 -> diminuisci quantita di un prodotto\n6 -> valore del magazzino\n7 -> fine programma\n"
+str_op_help:			.asciiz "Operazioni possibili:\n0 -> help\n1 -> cerca prodotto\n2 -> inserisci nuovo prodotto\n3 -> cancella prodotto\n4 -> aumenta quantita di un prodotto\n5 -> diminuisci quantita di un prodotto\n6 -> valore del magazzino\n7 -> riempi magazzino\n8 -> fine programma\n"
 str_op_cerca: 			.asciiz "Cerca prodotto\n"
 str_cerca_zeroprod:		.asciiz "Non sono presenti prodotti in magazzino\n"
 str_cerca_askcod:		.asciiz "Inserire il codice del prodotto da ricercare\n"
@@ -20,7 +20,6 @@ str_inserisci_val:		.asciiz "Inserire il valore del prodotto (intero)\n"
 str_inserisci_inserito:	.asciiz "Prodotto inserito\n"
 str_op_cancella: 		.asciiz "Cancella prodotto\n"
 str_cancella_nomeprod:	.asciiz "Cancellando il prodotto: "
-
 str_op_aumenta: 		.asciiz "Aumenta quantita prodotto\n"
 str_aumenta_qnt:		.asciiz "Inserire la quantita di prodotti da spostare in magazzino (numero positivo):\n"
 str_aumenta_aumentato:	.asciiz "Aumentata la quantita del prodotto\n"
@@ -32,6 +31,11 @@ str_diminuisci_diminuito:.asciiz "Quantita del prodotto diminuita\n"
 str_diminuisci_minmag:	.asciiz "La quantita di prodotti da prelevare specificata e maggiore della quantita del prodotto in magazzino\nQuantita del prodotto: "
 str_op_valore: 			.asciiz "Valore del magazzino\n"
 str_valore_val: 		.asciiz "Il valore dei prodotti in magazzino e: "
+
+str_op_autofill:		.asciiz "Riempimento automatico del magazzino\n"
+str_autofill_num:		.asciiz "Inserire il numero di prodotto da inserire in automatico\n"
+str_autofill_defname:	.asciiz "[auto]\n"
+
 str_exit:				.asciiz "Fine programma\n"
 
 #########################################################################################################################################################################
@@ -48,6 +52,14 @@ main:
 # massima capienza = 0xFFFF in 0($gp)
 	li $t0, 0xFFFF
 	sw $t0, 0($gp)
+
+# numero prodotti = 0x0000 in 6($gp)
+# posti in memoria = 0x000A in 4($gp)
+	li $t0, 0xA
+	sw $t0, 4($gp)
+
+# prossimo codice prodotto assegnabile è 0
+	sw $zero, 8($gp)
 	
 # calcola indirizzo base e limite iniziali della lista di prodotti
 # alloca spazio per 10 prodotti
@@ -55,13 +67,8 @@ main:
 	li $v0, 9
 	syscall
 	move $t0, $v0		# $t0 = indirizzo memoria allocata
-	sw $t0, 8($gp)
 	sw $t0, 12($gp)
-
-# numero prodotti = 0x0000 in 6($gp)
-# posti in memoria = 0x000A in 4($gp)
-	li $t0, 0xA
-	sw $t0, 4($gp)
+	sw $t0, 16($gp)
 	
 # inizializzazione jump address table delle operazioni disponibili
 	la $t0, operazioni	# $t0 = indirizzo base jump address table
@@ -79,8 +86,10 @@ main:
 	sw $t1, 20($t0)
 	la $t1, valore
 	sw $t1, 24($t0)
-	la $t1, exit
+	la $t1, autofill
 	sw $t1, 28($t0)
+	la $t1, exit
+	sw $t1, 32($t0)
 
 # stampa help
 	la $a0, str_op_help
@@ -99,11 +108,11 @@ main_magazzino:
 	li $v0, 5
 	syscall
 	
-# controllo codice operazione (cod >= 0 && cod < 8)
+# controllo codice operazione (cod >= 0 && cod < 9)
 	move $t0, $v0			# $t0 = codice operazione dato in input
 	blt $t0, $zero, main_coderr
 
-	li $t1, 8
+	li $t1, 9
 	blt $t0, $t1, main_cmdok
 
 # errore codice comando
@@ -153,7 +162,7 @@ cerca:
 	beq $s0, $zero, cerca_zeroprod
 	
 # sono presenti prodotti in magazzino: ricava indirizzo base
-	lw $s1, 8($gp)
+	lw $s1, 12($gp)
 
 # richiesta prodotto da ricercare
 	la $a0, str_cerca_askcod
@@ -162,8 +171,8 @@ cerca:
 	
 # richiedi codice prodotto
 	li $v0, 5
-	syscall
-
+	syscall	
+	
 # call ricbin(*array, length, n)
 # $s0 = numero prodotti = length
 # $s1 = indirizzo base prodotti
@@ -304,17 +313,18 @@ inserisci:
 	
 inserisci_spaziosuff:
 # l'indirizzo in cui inserire il prodotto è in fondo alla lista
-	lw $s1, 12($gp)		# $s1 = indirizzo dove inserire il prodotto (posizione limite)
+	lw $s1, 16($gp)		# $s1 = indirizzo dove inserire il prodotto (posizione limite)
 	j inserisci_inserimento
 
 inserisci_primaposizione:
 # codice prodotto di default
-	li $s0, 0			# $s0 = 0 = codice del primo prodotto
-	lw $s1, 8($gp)		# $s1 = indirizzo base prodotti
+	lw $s1, 12($gp)		# $s1 = indirizzo base prodotti
 
 inserisci_inserimento:
-# $s0 = codice prodotto
 # $s1 = indirizzo dove inserire il prodotto
+# ricava prossimo codice assegnabile
+	lw $s0, 8($gp)		# $s0 = codice prodotto
+	
 # salva codice prodotto
 	sw $s0, 0($s1)
 
@@ -351,13 +361,17 @@ inserisci_inserimento:
 # $s0 = codice prodotto
 # $s1 = indirizzo dove inserire il prodotto
 	addi $s1, $s1, 20	# $s1 = indirizzo prodotto successivo, nuovo indirizzo limite
-	sw $s1, 12($gp)
+	sw $s1, 16($gp)
 
+# aggiorna prossimo codice assegnabile
+	addi $s0, $s0, 1
+	sw $s0, 8($gp)
+	
 # aggiorna numero prodotti
-	lhu $s0, 6($gp)
+	lhu $s0, 6($gp)		# $s0 = numero prodotti
 	addi $s0, $s0, 1
 	sh $s0, 6($gp)
-	
+
 # epilogo
 	lw $ra, 8($sp)
 	lw $s1, 4($sp)
@@ -394,7 +408,7 @@ cancella:
 	syscall
 	
 # ricava indirizzo base prodotti
-	lw $s1, 8($gp)			# $s1 = indirizzo base prodotti
+	lw $s1, 12($gp)			# $s1 = indirizzo base prodotti
 
 # call ricbin(*array, length, n)
 # $s0 = numero prodotti = length
@@ -454,7 +468,7 @@ cancella:
 
 # sposta i prodotti successivi indietro di una posizione dell'array a partire dall'indirizzo in $s0
 # ricava indirizzo limite prodotti
-	lw $s2, 12($gp)			# $s2 = indirizzo limite
+	lw $s2, 16($gp)			# $s2 = indirizzo limite
 	
 cancella_loop:
 # $s0 = indirizzo prodotto cancellato = indirizzo spazio vuoto
@@ -486,7 +500,7 @@ cancella_loop:
 cancella_end:	
 # aggiorna indirizzo limite
 	sub $s2, $s2, 20
-	sw $s2, 12($gp)
+	sw $s2, 16($gp)
 	j cancella_epilogo
 	
 cancella_zeroprod:
@@ -576,7 +590,7 @@ aumenta:
 # $s2 = quantita prodotti attuali
 # $s3 = capienza massima
 # $s4 = prodotti attuali + prodotti da inserire
-	lw $a0, 8($gp)
+	lw $a0, 12($gp)
 	
 # calcola lunghezza array (numero prodotti)
 	lhu $a1, 6($gp)		# $a1 = numero prodotti = length
@@ -714,7 +728,7 @@ diminuisci:
 
 # cerca prodotto
 # call ricbin(*array, length, n)
-	lw $a0, 8($gp)
+	lw $a0, 12($gp)
 	lhu $a1, 6($gp)
 	move $a2, $s0
 	jal ricbin
@@ -812,13 +826,13 @@ valore:
 	sw $s1, 4($sp)
 	sw $s0, 0($sp)
 	
-# stampa titolo
+# stampa str_op_valore
 	la $a0, str_op_valore
 	li $v0, 4
 	syscall
 
 # controlla numero di prodotti
-	lw $s0, 8($gp)		# $s0 = indirizzo base prodotti
+	lw $s0, 12($gp)		# $s0 = indirizzo base prodotti
 	lhu $s1, 6($gp)		# $s1 = numero prodotti
 	beq $s1, $zero, valore_zeroprod
 
@@ -881,6 +895,62 @@ valore_epilogo:
 	lw $ra, 12($sp)
 	addi $sp, $sp, 16
 	jr $ra
+	
+#########################################################################################################################################################################
+
+autofill:
+# stampa str_op_autofill
+	la $a0, str_op_autofill
+	li $v0, 4
+	syscall
+
+# stampa str_autofill_num
+	la $a0, str_autofill_num
+	li $v0, 4
+	syscall
+
+# leggi numero prodotti da inserire
+	li $v0, 5
+	syscall
+	move $s0, $v0		# $s0 = numero prodotti da inserire
+
+# alloca memoria per i prodotti da inserire
+	li $t0, 20			# $t0 = dimensione struttura prodotto
+	mul $a0, $s0, $t0	# $a0 = quantità di memoria richiesta
+	li $v0, 9
+	syscall
+
+# ricava indirizzo di partenza
+	lhu $s1, 16($gp)	# $s1 = indirizzo limite prodotti
+	
+# salva codice prodotto
+
+	
+# salva nome prodotto
+	la $s2, str_autofill_defname
+	lw $t0, 0($s2)
+	sw $t0, 4($s1)
+	lw $t0, 4($s2)
+	sw $t0, 8($s1)
+
+# salva quantità default pari a 0
+	sw $zero, 12($s1)
+	
+# salva valore prodotto
+	sw $zero, 16($s1)
+
+# indirizzo prodotto successivo
+	addi $s1, $s1, 20
+
+
+
+
+
+
+
+	jr $ra
+	
+#########################################################################################################################################################################
 
 exit:
 # stampa
@@ -961,7 +1031,7 @@ ric:
 search_dx:
 # controlla se si è raggiunto la fine dell'array
 # $s1 = indirizzo prodotto centrale
-	lw $s3, 12($gp)				# $s3 = indirizzo ultimo prodotto
+	lw $s3, 16($gp)				# $s3 = indirizzo ultimo prodotto
 	addi $s4, $s1, 20			# $s4 = indirizzo primo prodotto della parte destra dell'array
 	bge $s4, $s3, product_not_found
 	
