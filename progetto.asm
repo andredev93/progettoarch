@@ -33,8 +33,8 @@ str_op_valore: 			.asciiz "Valore del magazzino\n"
 str_valore_val: 		.asciiz "Il valore dei prodotti in magazzino e: "
 
 str_op_autofill:		.asciiz "Riempimento automatico del magazzino\n"
-str_autofill_num:		.asciiz "Inserire il numero di prodotto da inserire in automatico\n"
-str_autofill_defname:	.asciiz "[auto]\n"
+str_autofill_num:		.asciiz "Inserire il numero di prodotti da inserire in automatico\n"
+str_autofill_defname:	.asciiz "[auto]"
 
 str_exit:				.asciiz "Fine programma\n"
 
@@ -899,6 +899,15 @@ valore_epilogo:
 #########################################################################################################################################################################
 
 autofill:
+# prologo
+	addi $sp, $sp, -24
+	sw $ra, 20($sp)
+	sw $s0, 16($sp)
+	sw $s1, 12($sp)
+	sw $s2, 8($sp)
+	sw $s3, 4($sp)
+	sw $s4, 0($sp)
+
 # stampa str_op_autofill
 	la $a0, str_op_autofill
 	li $v0, 4
@@ -919,35 +928,91 @@ autofill:
 	mul $a0, $s0, $t0	# $a0 = quantità di memoria richiesta
 	li $v0, 9
 	syscall
+	
+# aggiorna indicatore memoria disponibile
+	lhu $s1, 4($gp)		# $s1 = memoria disponibile
+	add $s1, $s0, $s1
+	sh $s1, 4($gp)
+
+# aggiorna numero prodotti in magazzino
+	lhu $s1, 6($gp)		# $s1 = numero prodotti
+	add $s1, $s0, $s1
+	sh $s1, 6($gp)
 
 # ricava indirizzo di partenza
-	lhu $s1, 16($gp)	# $s1 = indirizzo limite prodotti
+	lw $s1, 16($gp)	# $s1 = indirizzo limite prodotti
 	
-# salva codice prodotto
+# ricava codice prodotto
+	lw $s2, 8($gp)		# $s2 = codice da assegnare al prossimo prodotto
+	
+# ricava nome di default dei prodotti
+	la $t0, str_autofill_defname
+	lb $s3, 0($t0)		# $s3 = primo carattere del nome
+	lb $t1, 1($t0)
+	sll $t1, $t1, 8
+	add $s3, $s3, $t1	# $s3 = primi due caratteri del nome
+	lb $t1, 2($t0)
+	sll $t1, $t1, 16
+	add $s3, $s3, $t1	# $s3 = primi tre caratteri del nome
+	lb $t1, 3($t0)
+	sll $t1, $t1, 24
+	add $s3, $s3, $t1	# $s3 = prima metà del nome
+	lb $s4, 4($t0)		# $s4 = seconda parte nome prodotto
+	lb $t1, 5($t0)
+	sll $t1, $t1, 8
+	add $s4, $s4, $t1
+	lb $t1, 6($t0)
+	sll $t1, $t1, 16
+	add $s4, $s4, $t1
+	
+# ricava valore prodotto default pari a 1
+	li $t0, 1
+	
+autofill_loop:
+# $s0 = indice loop
+# $s1 = indirizzo base prodotto
+# $s2 = codice prodotto
+# $s3-$s4 = nome prodotto
+# $t0 = valore prodotto
 
+# salva codice prodotto
+	sw $s2, 0($s1)
 	
 # salva nome prodotto
-	la $s2, str_autofill_defname
-	lw $t0, 0($s2)
-	sw $t0, 4($s1)
-	lw $t0, 4($s2)
-	sw $t0, 8($s1)
+	sw $s3, 4($s1)
+	sw $s4, 8($s1)
 
 # salva quantità default pari a 0
 	sw $zero, 12($s1)
 	
-# salva valore prodotto
-	sw $zero, 16($s1)
+# salva valore prodotto default pari a 1
+	sw $t0, 16($s1)
 
-# indirizzo prodotto successivo
+# aggiorna valori loop
+	addi $s0, $s0, -1
 	addi $s1, $s1, 20
+	addi $s2, $s2, 1
 
+# controlla che si siano inseriti tutti i prodotti: indice > 0
+	bgt $s0, $zero, autofill_loop
 
+# se tutti i prodotti sono stati inseriti aggiorna gli indicatori
+# aggiorna prossimo codice assegnabile
+# $s2 = codice prodotto
+	sw $s2, 8($gp)
 
-
-
-
-
+# aggiorna indirizzo limite prodotti
+# $s1 = indirizzo limite prodotto
+	sw $s1, 16($gp)
+	
+# epilogo
+	lw $ra, 20($sp)
+	lw $s0, 16($sp)
+	lw $s1, 12($sp)
+	lw $s2, 8($sp)
+	lw $s3, 4($sp)
+	lw $s4, 0($sp)
+	addi $sp, $sp, 24
 	jr $ra
 	
 #########################################################################################################################################################################

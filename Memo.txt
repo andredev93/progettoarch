@@ -35,7 +35,7 @@ Etichette
 	741 valore_res
 	760 valore_epilogo
 891 autofill
-	
+	942 autofill_loop
 781 exit
 792 ricbin
  
@@ -47,5 +47,5 @@ cancella: s0, s1, s2
 aumenta: s0, s1, s2, s3, s4, s5
 diminuisci: s0, s1, s2, s3
 valore: s0, s1, s2
-autofill: s0
+autofill: s0, s1, s2, s3, s4
 ricbin: s0, s1, s2, s3, s4, s5
